@@ -1,2 +1,2 @@
 # GGJ-Base
-Global Game Jam 2018
+Global Game Jam - Base Shell
