@@ -1,0 +1,38 @@
+[package]
+name = "GGJ-Base"
+version = "0.1.0"
+authors = [
+    "Graham Wihlidal <graham@wihlidal.ca>",
+    "Tomasz Stachowiak <tomasz.stachowiak@frostbite.com>"
+]
+license = "MIT"
+
+[[bin]]
+name = "ggj-base"
+path = "src/main.rs"
+
+[dependencies]
+piston = "0.35.0"
+piston2d-graphics = "0.24.0"
+piston2d-opengl_graphics = "0.50.0"
+piston_window = "0.70.0"
+find_folder = "0.3.0"
+tiled = "0.7.2"
+
+[dependencies.pistoncore-sdl2_window]
+version = "0.47.0"
+optional = true
+
+[dependencies.pistoncore-glfw_window]
+version = "0.39.0"
+optional = true
+
+[dependencies.pistoncore-glutin_window]
+version = "0.43.0"
+optional = true
+
+[features]
+default = ["include_glutin"]
+include_sdl2 = ["pistoncore-sdl2_window"]
+include_glfw = ["pistoncore-glfw_window"]
+include_glutin = ["pistoncore-glutin_window"]
