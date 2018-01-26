@@ -9,6 +9,7 @@ extern crate ncollide;
 extern crate ai_behavior;
 extern crate sprite;
 extern crate rand;
+extern crate image;
 
 #[cfg(feature="piston")] #[macro_use] extern crate conrod;
 #[cfg(feature="piston")] mod support;
@@ -46,6 +47,8 @@ use glfw_window::GlfwWindow as GameWindow;
 use glutin_window::GlutinWindow as GameWindow;
 
 mod object;
+mod scalar_field;
+use scalar_field::*;
 //use object::Object;
 
 #[macro_use]
@@ -78,7 +81,7 @@ impl Game {
 
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
         const RED:   [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-        const BLUE:   [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+        const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 
         let mouse_square = rectangle::square(0.0, 0.0, 50.0);
         let square = rectangle::square(0.0, 0.0, 40.0);
@@ -87,10 +90,23 @@ impl Game {
         let (x, y) = ((args.width / 2) as f64,
                       (args.height / 2) as f64);
 
+        let sf = ScalarField::new(16, 16);
+
+        let texture = Texture::from_image(
+            &sf.to_image_buffer(),
+            &TextureSettings::new()
+        );
+
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
-            clear(GREEN, gl);
+            clear([0.1, 0.1, 0.1, 1.0], gl);
 
+			Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
+			    &texture,
+			    &Default::default(),
+			    graphics::math::identity().trans(-1.0, -1.0).scale(2.0 / sf.width as f64, 2.0 / sf.height as f64),
+			    gl
+			);
             let mouse_transform = c.transform.trans(mouse_x, mouse_y)
                                        .rot_rad(rotation)
                                        .trans(-25.0, -25.0);
