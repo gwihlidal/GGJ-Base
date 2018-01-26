@@ -20,6 +20,15 @@ extern crate glfw_window;
 #[cfg(feature = "include_glutin")]
 extern crate glutin_window;
 
+pub mod object;
+//use object::Object;
+
+#[macro_use]
+pub mod geometry;
+
+#[macro_use]
+pub mod models;
+
 use piston::window::{ AdvancedWindow, /*Window, */WindowSettings };
 use piston::event_loop::*;
 use piston::input::*;
@@ -45,59 +54,74 @@ use glfw_window::GlfwWindow as GameWindow;
 #[cfg(feature = "include_glutin")]
 use glutin_window::GlutinWindow as GameWindow;
 
-mod object;
-//use object::Object;
+use models::pigeon::Pigeon;
 
-#[macro_use]
-mod geometry;
+pub struct RenderState {
+    gl: GlGraphics // OpenGL drawing backend.
+}
 
-#[macro_use]
-mod models;
+pub struct GameState {
+    rotation: f64,   // Rotation for the square
+    pigeons: Vec<Pigeon>,
+}
 
 pub struct Game {
-    gl: GlGraphics, // OpenGL drawing backend.
-    rotation: f64,   // Rotation for the square
+    render_state: RenderState,
+    game_state: GameState
 }
 
 impl Game {
     fn new() -> Game {
-        Game { gl: GlGraphics::new(OpenGL::V3_2), rotation: 0.0 }
+        Game {
+            render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
+            game_state: GameState { rotation: 0.0, pigeons: Vec::new() }
+        }
     }
 
     fn on_load(&mut self, _w: &GameWindow) {
-
+        println!("Adding pigeons!");
+        let pos = geometry::Vector {
+            position: geometry::Point::new(400.0, 400.0),
+            direction: 0.0
+        };
+        self.game_state.pigeons.push(Pigeon::new(pos));
     }
 
     fn update(&mut self, args: &UpdateArgs) {
         // Rotate 2 radians per second.
-        self.rotation += 2.0 * args.dt;
+        self.game_state.rotation += 2.0 * args.dt;
     }
 
-    fn render(&mut self, args: &RenderArgs) {
+    fn render_pigeon(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
         use graphics::*;
+        use geometry::traits::Position;
 
-        const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-        const RED:   [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+        render_state.gl.draw(args.viewport(), |c, gl| {
+            let square = graphics::rectangle::square(0.0, 0.0, 50.0);
+            let rotation = game_state.rotation;
 
-        let square = rectangle::square(0.0, 0.0, 50.0);
-        let rotation = self.rotation;
-        let (x, y) = ((args.width / 2) as f64,
-                      (args.height / 2) as f64);
+            //let (x, y) = ((args.width  / 2) as f64,
+             //             (args.height / 2) as f64);
 
-        self.gl.draw(args.viewport(), |c, gl| {
-            // Clear the screen.
-            clear(GREEN, gl);
-
-            let transform = c.transform.trans(x, y)
-                                       .rot_rad(rotation)
-                                       .trans(-25.0, -25.0);
-
-            // Draw a box rotating around the middle of the screen.
-            rectangle(RED, square, transform, gl);
+            let transform = c.transform.trans(_pigeon.x() as f64, _pigeon.y() as f64)
+                                        .rot_rad(rotation)
+                                        .trans(-25.0, -25.0);
+            graphics::rectangle(RED, square, transform, gl);
         });
     }
 
+    fn render(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs) {
+        render_state.gl.draw(args.viewport(), |_c, gl| {
+            const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+            graphics::clear(GREEN, gl);
+        });
 
+        let pigeons = &game_state.pigeons;
+        for pigeon in pigeons.iter() {
+            Game::render_pigeon(render_state, game_state, args, pigeon);
+        }
+    }
 }
 
 fn main() {
@@ -129,7 +153,7 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            game.render(&r);
+            Game::render(&mut game.render_state, &game.game_state, &r);
         }
 
         if let Some(u) = e.update_args() {

@@ -1,6 +1,6 @@
-mod point;
-mod size;
-mod traits;
+pub mod point;
+pub mod size;
+pub mod traits;
 #[macro_use] mod vector;
 
 pub use self::vector::Vector;

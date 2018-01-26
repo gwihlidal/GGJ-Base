@@ -3,7 +3,9 @@ name = "GGJ-Base"
 version = "0.1.0"
 authors = [
     "Graham Wihlidal <graham@wihlidal.ca>",
-    "Tomasz Stachowiak <h3@h3.gd>"
+    "Tomasz Stachowiak <h3@h3.gd>",
+    "Anke <anke@acagamics.de>",
+    "Victor Davidsson <vdavi@kth.se>"
 ]
 license = "MIT"
 
