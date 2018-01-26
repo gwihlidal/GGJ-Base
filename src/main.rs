@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate piston;
 extern crate graphics;
 extern crate opengl_graphics;
