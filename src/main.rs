@@ -137,12 +137,12 @@ fn main() {
     let mut capture_cursor = false;
     let mut cursor = [0.0, 0.0];
 
-    let assets = find_folder::Search::ParentsThenKids(3, 3)
-        .for_folder("assets").unwrap();
-    let freetype = ft::Library::init().unwrap();
-    let font = assets.join("FiraSans-Regular.ttf");
-    let mut face = freetype.new_face(&font, 0).unwrap();
-    face.set_pixel_sizes(0, 48).unwrap();
+    //let assets = find_folder::Search::ParentsThenKids(3, 3)
+    //    .for_folder("assets").unwrap();
+    //let freetype = ft::Library::init().unwrap();
+    //let font = assets.join("FiraSans-Regular.ttf");
+    //let mut face = freetype.new_face(&font, 0).unwrap();
+    //face.set_pixel_sizes(0, 48).unwrap();
 
     let mut game = Game::new();
     game.on_load(&window);
