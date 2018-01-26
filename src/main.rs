@@ -18,19 +18,19 @@ extern crate glfw_window;
 #[cfg(feature = "include_glutin")]
 extern crate glutin_window;
 
-use piston::window::{ AdvancedWindow, Window, WindowSettings };
+use piston::window::{ AdvancedWindow, /*Window, */WindowSettings };
 use piston::event_loop::*;
 use piston::input::*;
 use opengl_graphics::{ GlGraphics, Texture, TextureSettings, OpenGL };
 use graphics::math::Matrix2d;
-use sprite::*;
-use ai_behavior::{
+//use sprite::*;
+/*use ai_behavior::{
     Action,
     Sequence,
     Wait,
     WaitForever,
     While,
-};
+};*/
 
 #[cfg(feature = "include_sdl2")]
 use sdl2_window::Sdl2Window as GameWindow;
@@ -42,18 +42,18 @@ use glutin_window::GlutinWindow as GameWindow;
 mod object;
 //use object::Object;
 
-pub struct Game {
+pub struct Game<'a> {
     gl: GlGraphics, // OpenGL drawing backend.
     rotation: f64,   // Rotation for the square
-    //face: Option<ft::Face>
+    face: ft::Face<'a>,
 }
 
-impl Game {
-    fn new() -> Game {
-        Game {  gl: GlGraphics::new(OpenGL::V4_1), rotation: 0.0 }
+impl<'a> Game<'a> {
+    fn new(face: ft::Face<'a>) -> Game<'a> {
+        Game { gl: GlGraphics::new(OpenGL::V4_1), rotation: 0.0, face }
     }
 
-    fn on_load(&mut self, w: &GameWindow) {
+    fn on_load(&mut self, _w: &GameWindow) {
 
     }
 
@@ -73,6 +73,8 @@ impl Game {
         let (x, y) = ((args.width / 2) as f64,
                       (args.height / 2) as f64);
 
+        let mut face = &mut self.face;
+
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
@@ -84,7 +86,7 @@ impl Game {
             // Draw a box rotating around the middle of the screen.
             rectangle(RED, square, transform, gl);
 
-            //render_text(&mut self.face, gl, transform, "Hello Piston!");
+            render_text(&mut face, gl, transform, "Hello Piston!");
         });
     }
 
@@ -123,7 +125,7 @@ fn main() {
 
     println!("GGJ-Base");
 
-    let opengl = OpenGL::V4_1;
+    //let opengl = OpenGL::V4_1;
 
     let mut window: GameWindow = WindowSettings::new(
             "ggj-base",
@@ -137,14 +139,14 @@ fn main() {
     let mut capture_cursor = false;
     let mut cursor = [0.0, 0.0];
 
-    //let assets = find_folder::Search::ParentsThenKids(3, 3)
-    //    .for_folder("assets").unwrap();
-    //let freetype = ft::Library::init().unwrap();
-    //let font = assets.join("FiraSans-Regular.ttf");
-    //let mut face = freetype.new_face(&font, 0).unwrap();
-    //face.set_pixel_sizes(0, 48).unwrap();
+    let assets = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets").unwrap();
+    let freetype = ft::Library::init().unwrap();
+    let font = assets.join("FiraSans-Regular.ttf");
+    let face = freetype.new_face(&font, 0).unwrap();
+    face.set_pixel_sizes(0, 48).unwrap();
 
-    let mut game = Game::new();
+    let mut game = Game::new(face);
     game.on_load(&window);
 
     // http://blog.piston.rs/2014/09/13/rust-event/
