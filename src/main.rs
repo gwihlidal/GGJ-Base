@@ -6,6 +6,7 @@ extern crate nalgebra;
 extern crate ncollide;
 extern crate ai_behavior;
 extern crate sprite;
+extern crate rand;
 
 #[cfg(feature="piston")] #[macro_use] extern crate conrod;
 #[cfg(feature="piston")] mod support;
@@ -45,7 +46,13 @@ use glutin_window::GlutinWindow as GameWindow;
 mod object;
 //use object::Object;
 
-pub struct Game {
+#[macro_use]
+mod geometry;
+
+#[macro_use]
+mod models;
+
+pub struct Game<'a> {
     gl: GlGraphics, // OpenGL drawing backend.
     rotation: f64,   // Rotation for the square
 }
