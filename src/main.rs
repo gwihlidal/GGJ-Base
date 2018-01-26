@@ -92,6 +92,7 @@ impl Game {
 
         let mut sf = ScalarField::new(16 * 4, 9 * 4);
         sf.splat(10, 10, 7f32);
+        sf.splat(40, 30, 7f32);
 
         let texture = Texture::from_image(
             &sf.to_image_buffer(),
