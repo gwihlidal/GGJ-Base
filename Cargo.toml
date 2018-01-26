@@ -3,7 +3,7 @@ name = "GGJ-Base"
 version = "0.1.0"
 authors = [
     "Graham Wihlidal <graham@wihlidal.ca>",
-    "Tomasz Stachowiak <tomasz.stachowiak@frostbite.com>"
+    "Tomasz Stachowiak <h3@h3.gd>"
 ]
 license = "MIT"
 
@@ -12,12 +12,28 @@ name = "ggj-base"
 path = "src/main.rs"
 
 [dependencies]
-piston = "0.35.0"
-piston2d-graphics = "0.24.0"
-piston2d-opengl_graphics = "0.50.0"
-piston_window = "0.70.0"
+conrod = "*"
+piston = "*"
+piston2d-graphics = "*"
+piston2d-opengl_graphics = "*"
+piston-ai_behavior = "*"
+piston2d-sprite = "*"
+piston_window = "*"
+piston-music = "*"
+piston2d-graphics_tree = "*"
+image = "*"
+piston2d-drag_controller = "*"
 find_folder = "0.3.0"
 tiled = "0.7.2"
+freetype-rs = "0.16.0"
+nalgebra = "*"
+ncollide = "*"
+gfx = "0.17.1"
+gfx_device_gl = "0.15.0"
+vecmath = "0.3.0"
+camera_controllers = "0.23.0"
+rand = "0.3.14"
+shader_version = "0.3.0"
 
 [dependencies.pistoncore-sdl2_window]
 version = "0.47.0"
