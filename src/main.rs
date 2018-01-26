@@ -90,7 +90,8 @@ impl Game {
         let (x, y) = ((args.width / 2) as f64,
                       (args.height / 2) as f64);
 
-        let sf = ScalarField::new(16, 16);
+        let mut sf = ScalarField::new(16 * 4, 9 * 4);
+        sf.splat(10, 10, 7f32);
 
         let texture = Texture::from_image(
             &sf.to_image_buffer(),
@@ -98,9 +99,6 @@ impl Game {
         );
 
         self.gl.draw(args.viewport(), |c, gl| {
-            // Clear the screen.
-            clear([0.1, 0.1, 0.1, 1.0], gl);
-
 			Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
 			    &texture,
 			    &Default::default(),
