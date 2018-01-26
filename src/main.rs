@@ -54,7 +54,7 @@ mod geometry;
 #[macro_use]
 mod models;
 
-pub struct Game<'a> {
+pub struct Game {
     gl: GlGraphics, // OpenGL drawing backend.
     rotation: f64,   // Rotation for the square
 }
