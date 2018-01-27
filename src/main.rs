@@ -100,9 +100,9 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 impl<'a> Game<'a> {
     fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
-		sf.splat(0, 25, 9f32);
-		sf.splat(20, 15, 9f32);
-		sf.splat(40, 30, 7f32);
+		//sf.splat(0, 25, 9f32);
+		//sf.splat(20, 15, 9f32);
+		//sf.splat(40, 30, 7f32);
 
         Game {
             render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
@@ -160,8 +160,18 @@ impl<'a> Game<'a> {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
 
-        for pigeon in self.game_state.pigeons.iter_mut() {
-            pigeon.update((0.6 * args.dt) as f32);
+        let mut pigeon_to_nuke = None;
+        for i in 0..self.game_state.pigeons.len() {
+        	let mut pigeon = &mut self.game_state.pigeons[i];
+            if let PigeonStatus::ReachedDestination = pigeon.update((0.6 * args.dt) as f32) {
+            	pigeon_to_nuke = Some(i);
+            }
+        }
+
+        if let Some(i) = pigeon_to_nuke {
+        	let pos = self.game_state.pigeons[i].vector.position;
+        	self.game_state.pigeons.swap_remove(i);
+        	self.game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32);
         }
 
         if let Some(coop_idx) = self.game_state.selected_coop {

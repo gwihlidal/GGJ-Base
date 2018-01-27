@@ -31,11 +31,13 @@ impl ScalarField {
 		}
 	}
 
-	pub fn splat(&mut self, splat_x: u32, splat_y: u32, radius: f32) {
+	pub fn splat(&mut self, pos: Point, radius: f32) {
+		let pos = pos * Point::new(self.width as f32, self.height as f32);
+
 		for y in 0..self.height {
 			for x in 0..self.width {
-				let xd = x as f32 - splat_x as f32;
-				let yd = y as f32 - splat_y as f32;
+				let xd = x as f32 - pos.x;
+				let yd = y as f32 - pos.y;
 				self.values[y * self.width + x] += smoothstep(radius, 0.0f32, (xd * xd + yd * yd).sqrt());
 			}
 		}
