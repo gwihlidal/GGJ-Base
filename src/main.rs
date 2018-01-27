@@ -142,12 +142,12 @@ impl<'a> Game<'a> {
 
     fn simulate_trajectory(&self, origin: Point, cursor: Point) -> PigeonTrajectory {
     	let mut pos = origin;
-    	let mut vel = (cursor - pos).normalized();
+    	let mut vel = cursor - pos;
     	//let mut vel = vel * 0.1f32;
 
     	let mut points = Vec::new();
 
-    	let iter_count = 70;
+    	let iter_count = 200;
     	let delta_t = 0.07f32;
 
     	for _ in 0..iter_count {
@@ -156,6 +156,11 @@ impl<'a> Game<'a> {
     		vel = vel * 0.98 + grad * 0.23;
 
     		pos = pos + vel * delta_t;
+
+    		// TODO: x bounds
+    		if pos.y > 1f32 || pos.y < -1f32 {
+    			break;
+    		}
     	}
 
     	PigeonTrajectory { points }
@@ -237,9 +242,9 @@ impl<'a> Game<'a> {
 	    }
     }
 
-    fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, cursor: Point) {
+    fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, _cursor: Point) {
         use graphics::*;
-        let mouse_square = rectangle::square(0.0, 0.0, 0.1);
+        let _mouse_square = rectangle::square(0.0, 0.0, 0.1);
 
         render_state.gl.draw(args.viewport(), |c, gl| {
         	let sf = &game_state.irradiance_field;
@@ -263,7 +268,7 @@ impl<'a> Game<'a> {
             	Game::render_trajectory(gl, &game_state.aim_trajectory);
             }
 
-            let rotation = game_state.rotation;
+            /*let rotation = game_state.rotation;
             let mouse_transform = Game::std_transform()
             	.trans(cursor.x as f64, cursor.y as f64)
 				.rot_rad(rotation)//.trans(-25.0, -25.0)
@@ -271,7 +276,7 @@ impl<'a> Game<'a> {
 
             // Draw a box rotating around the middle of the screen.
             const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-            rectangle(RED, mouse_square, mouse_transform, gl);
+            rectangle(RED, mouse_square, mouse_transform, gl);*/
 
             text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("PIGEON SIMULATOR 2018",
                                                                      glyph_cache,
