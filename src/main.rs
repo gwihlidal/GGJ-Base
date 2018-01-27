@@ -299,7 +299,10 @@ impl<'a> Game<'a> {
         // Full Screen UI
         if game_state.game_over {
             render_state.gl.draw(args.viewport(), |_c, gl| {
-                let gui_transform = scale_0_to_1.flip_v().trans(0.0, -1.0).scale(1.0 / args.draw_width as f64, 1.0 / args.draw_height as f64);
+                let gui_transform = scale_0_to_1
+                	.flip_v()
+                	.trans(0.0, -1.0)
+                	.scale(1.0 / _assets.game_over.get_width() as f64, 1.0 / _assets.game_over.get_height() as f64);
                 image(&_assets.game_over, gui_transform, gl);
             });
         }
