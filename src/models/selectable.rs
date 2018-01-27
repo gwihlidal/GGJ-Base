@@ -43,7 +43,7 @@ impl SelectableRect {
         return 1.0 + self.time_inside.cos();
     }
 
-    fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
+    pub fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
         use graphics::*;
 
         render_state.gl.draw(args.viewport(), |_c, gl| {

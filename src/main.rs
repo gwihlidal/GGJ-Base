@@ -67,6 +67,7 @@ use std::f32;
 use std::f64;
 use models::pigeon::*;
 use models::coop::Coop;
+use models::systemhub::SystemHubCollection;
 use geometry::traits::Collide;
 
 pub struct RenderState {
@@ -77,6 +78,7 @@ pub struct GameState {
     rotation: f64,   // Rotation for the square
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
+    system_hubs: SystemHubCollection,
     irradiance_field: ScalarField,
     aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
@@ -113,6 +115,7 @@ impl<'a> Game<'a> {
             	rotation: 0.0,
             	pigeons: Vec::new(),
             	coops: Vec::new(),
+                system_hubs: SystemHubCollection::new(),
             	irradiance_field: sf,
             	aim_trajectory: Trajectory { points: Vec::new() },
             	game_over: false,
@@ -135,6 +138,7 @@ impl<'a> Game<'a> {
     fn on_load(&mut self, _w: &GameWindow) {
         let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
+        self.game_state.system_hubs.init();
 
         // Pigeon animation frame #0
         self.assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
@@ -215,6 +219,8 @@ impl<'a> Game<'a> {
         }
 
         self.game_state.pigeon_timer += args.dt;
+
+        self.game_state.system_hubs.update_systems(args);
     }
 
     fn render_pigeon(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
@@ -353,6 +359,7 @@ impl<'a> Game<'a> {
             Game::render_coop(render_state, args, coop);
         }
 
+        game_state.system_hubs.render_systems(render_state, args);
         // Full Screen UI
         if game_state.game_over {
             render_state.gl.draw(args.viewport(), |_c, gl| {

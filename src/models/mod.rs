@@ -7,3 +7,4 @@ pub use self::pigeon::Pigeon;
 pub use self::coop::Coop;
 pub use self::selectable::SelectableRect;
 pub use self::systemhub::SystemHub;
+pub use self::systemhub::SystemHubCollection;
