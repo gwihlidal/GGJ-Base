@@ -8,7 +8,7 @@ pub struct Trajectory {
 
 #[derive(Clone)]
 pub struct Pigeon {
-    vector: Vector,
+    pub vector: Vector,
     pub trajectory: Option<Trajectory>,
     trajectory_pos: usize,
 }
