@@ -72,6 +72,7 @@ pub struct GameState {
     rotation: f64,   // Rotation for the square
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
+    irradiance_field: ScalarField,
 }
 
 pub struct Game {
@@ -81,9 +82,18 @@ pub struct Game {
 
 impl Game {
     fn new() -> Game {
+		let mut sf = ScalarField::new(16 * 4, 9 * 4);
+		sf.splat(10, 10, 7f32);
+		sf.splat(40, 30, 7f32);
+
         Game {
             render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
-            game_state: GameState { rotation: 0.0, pigeons: Vec::new(), coops: Vec::new() }
+            game_state: GameState {
+            	rotation: 0.0,
+            	pigeons: Vec::new(),
+            	coops: Vec::new(),
+            	irradiance_field: sf,
+            }
         }
     }
 
@@ -142,18 +152,15 @@ impl Game {
         use graphics::*;
         let mouse_square = rectangle::square(0.0, 0.0, 50.0);
 
-        let mut sf = ScalarField::new(16 * 4, 9 * 4);
-        sf.splat(10, 10, 7f32);
-        sf.splat(40, 30, 7f32);
-
-        let texture = Texture::from_image(
-            &sf.to_image_buffer(),
-            &TextureSettings::new()
-        );
-
         render_state.gl.draw(args.viewport(), |c, gl| {
+        	let sf = &game_state.irradiance_field;
+	        let sf_texture = Texture::from_image(
+	            &sf.to_image_buffer(),
+	            &TextureSettings::new()
+	        );
+
             Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
-			    &texture,
+			    &sf_texture,
 			    &Default::default(),
 			    graphics::math::identity().trans(-1.0, -1.0).scale(2.0 / sf.width as f64, 2.0 / sf.height as f64),
 			    gl
