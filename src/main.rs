@@ -126,12 +126,6 @@ impl<'a> Game<'a> {
     }
 
     fn on_load(&mut self, _w: &GameWindow) {
-        println!("Adding pigeons!");
-        let pos = geometry::Vector {
-            position: geometry::Point::new(0.4, 0.0),
-            direction: 0.0
-        };
-
         let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
     }
@@ -226,7 +220,7 @@ impl<'a> Game<'a> {
     }
 
     fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory) {
-    	if trajectory.points.len() < 2 { 
+    	if trajectory.points.len() < 2 {
     		return;
     	}
 
