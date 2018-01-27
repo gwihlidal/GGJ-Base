@@ -10,6 +10,7 @@ extern crate ai_behavior;
 extern crate sprite;
 extern crate rand;
 extern crate image;
+extern crate rodio;
 
 #[cfg(feature="piston")] #[macro_use] extern crate conrod;
 #[cfg(feature="piston")] mod support;
@@ -58,6 +59,7 @@ use glfw_window::GlfwWindow as GameWindow;
 #[cfg(feature = "include_glutin")]
 use glutin_window::GlutinWindow as GameWindow;
 
+use std::io::BufReader;
 use models::pigeon::Pigeon;
 use models::coop::Coop;
 use geometry::traits::Collide;
@@ -182,7 +184,7 @@ impl Game {
 fn main() {
 
     println!("GGJ-Base");
-
+    
     //let opengl = OpenGL::V3_2;
 
     let mut window: GameWindow = WindowSettings::new(
@@ -226,6 +228,13 @@ fn main() {
 
         if let Some(Button::Mouse(button)) = e.press_args() {
             println!("Pressed mouse button '{:?}'", button);
+
+            if button == MouseButton::Left {
+                play_sound("assets/dummy.wav");
+            }
+            else if button == MouseButton::Right {
+                play_sound("assets/footstep.wav");
+            }
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
@@ -259,4 +268,16 @@ fn main() {
         e.text(|text| println!("Typed '{}'", text));
         e.resize(|w, h| println!("Resized '{}, {}'", w, h));
     }
+}
+
+fn play_sound(sound_file: &str){
+    let endpoint = rodio::get_default_endpoint().unwrap();
+    let sink = rodio::Sink::new(&endpoint);
+     
+    let file = std::fs::File::open(sound_file).unwrap();
+    let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
+
+    sink.append(source);
+    sink.detach();
+   
 }

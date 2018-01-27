@@ -36,6 +36,7 @@ vecmath = "0.3.0"
 camera_controllers = "0.23.0"
 rand = "0.3.14"
 shader_version = "0.3.0"
+rodio = "0.5.2"
 
 [dependencies.pistoncore-sdl2_window]
 version = "0.47.0"
