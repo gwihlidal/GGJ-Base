@@ -36,7 +36,7 @@ use geometry::point::{Point};
 pub mod models;
 
 #[allow(unused_imports)]
-use piston::window::{ AdvancedWindow, /*Window, */WindowSettings };
+use piston::window::{ AdvancedWindow, Window, WindowSettings };
 use piston::event_loop::*;
 use piston::input::*;
 
@@ -299,7 +299,7 @@ impl<'a> Game<'a> {
         // Full Screen UI
         if game_state.game_over {
             render_state.gl.draw(args.viewport(), |_c, gl| {
-                let gui_transform = scale_0_to_1.flip_v().trans(0.0, -1.0).scale(1.0 / 1920.0 as f64, 1.0 / 1080.0 as f64);
+                let gui_transform = scale_0_to_1.flip_v().trans(0.0, -1.0).scale(1.0 / args.draw_width as f64, 1.0 / args.draw_height as f64);
                 image(&_assets.game_over, gui_transform, gl);
             });
         }
@@ -399,7 +399,7 @@ fn main() {
         e.mouse_cursor(|x, y| {
             cursor = Point::new(x as f32, y as f32);
 			cursor = cursor
-			/ Point::new(1920 as f32, 1080 as f32)
+			/ Point::new(window.size().width as f32, window.size().height as f32)
 			- Point::new(0.5f32, 0.5f32);
 			cursor = cursor * Point::new(16.0 / 9.0 * 2.0, -2.0);
 
