@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
+/*
 extern crate piston;
 extern crate graphics;
-extern crate opengl_graphics;
+//extern crate opengl_graphics;
 extern crate find_folder;
 extern crate nalgebra;
 extern crate ncollide;
@@ -11,68 +12,75 @@ extern crate sprite;
 extern crate rand;
 extern crate image;
 extern crate rodio;
+extern crate gfx_graphics;
+extern crate gfx;
+extern crate gfx_device_gl;*/
 
-#[cfg(feature="piston")] #[macro_use] extern crate conrod;
-#[cfg(feature="piston")] mod support;
-
-#[cfg(feature = "include_sdl2")]
-extern crate sdl2_window;
-#[cfg(feature = "include_glfw")]
-extern crate glfw_window;
-#[cfg(feature = "include_glutin")]
-extern crate glutin_window;
-
-pub mod object;
+//#[cfg(feature="piston")] #[macro_use] extern crate conrod;
+//#[cfg(feature="piston")] mod support;
+//pub mod object;
 //use object::Object;
 
-mod scalar_field;
-use scalar_field::*;
+//mod scalar_field;
+//use scalar_field::*;
 
-#[macro_use]
-pub mod geometry;
-use geometry::point::{Point};
+//#[macro_use]
+//pub mod geometry;
+//use geometry::point::{Point};
 
-#[macro_use]
-pub mod models;
+//#[macro_use]
+//pub mod models;
 
-#[allow(unused_imports)]
-use piston::window::{ AdvancedWindow, Window, WindowSettings };
-use piston::event_loop::*;
-use piston::input::*;
+//#[allow(unused_imports)]
+//use piston::window::{ OpenGLWindow, AdvancedWindow, Window, WindowSettings };
+//use piston::event_loop::*;
+//use piston::input::*;
 
-#[allow(unused_imports)]
-use opengl_graphics::{ GlGraphics, Texture, TextureSettings, OpenGL, GlyphCache };
+//#[allow(unused_imports)]
+//use opengl_graphics::{ GlGraphics, Texture, TextureSettings, OpenGL, GlyphCache };
 
-#[allow(unused_imports)]
-use graphics::math::Matrix2d;
-//use sprite::*;
-/*use ai_behavior::{
-    Action,
-    Sequence,
-    Wait,
-    WaitForever,
-    While,
-};*/
+//#[allow(unused_imports)]
+//use graphics::math::Matrix2d;
 
-#[cfg(feature = "include_sdl2")]
-use sdl2_window::Sdl2Window as GameWindow;
-#[cfg(feature = "include_glfw")]
-use glfw_window::GlfwWindow as GameWindow;
-#[cfg(feature = "include_glutin")]
-use glutin_window::GlutinWindow as GameWindow;
+
+//use models::pigeon::*;
+//use models::coop::Coop;
+//use geometry::traits::Collide;
+
+extern crate glutin_window;
+extern crate piston;
+extern crate graphics;
+extern crate gfx_graphics;
+extern crate find_folder;
+extern crate gfx;
+extern crate gfx_device_gl;
+extern crate rodio;
+extern crate rand;
 
 use std::path::Path;
 use std::io::BufReader;
 use std::f32;
 use std::f64;
-use models::pigeon::*;
-use models::coop::Coop;
-use geometry::traits::Collide;
 
-pub struct RenderState {
-    gl: GlGraphics, // OpenGL drawing backend.
+use gfx::traits::*;
+use gfx::format::{DepthStencil, Formatted, Srgba8};
+use gfx::memory::Typed;
+use glutin_window::*;
+use piston::window::{OpenGLWindow, Window, WindowSettings};
+use piston::event_loop::{Events, EventSettings, EventLoop};
+use graphics::draw_state::Blend;
+use graphics::*;
+use piston::input::*;
+use gfx_graphics::*;
+
+use GfxGraphics<'_, gfx_device_gl::Resources, gfx_device_gl::CommandBuffer> as GraphicsObj;
+
+
+pub struct RenderState<'a> {
+    g: &'a mut GfxGraphics<'a, gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>,
 }
 
+/*
 pub struct GameState {
     rotation: f64,   // Rotation for the square
     pigeons: Vec<Pigeon>,
@@ -325,15 +333,15 @@ impl<'a> Game<'a> {
             	Game::render_trajectory(gl, &game_state.aim_trajectory);
             }
 
-            /*let rotation = game_state.rotation;
-            let mouse_transform = Game::std_transform()
-            	.trans(cursor.x as f64, cursor.y as f64)
-				.rot_rad(rotation)//.trans(-25.0, -25.0)
-				;
+            //let rotation = game_state.rotation;
+            //let mouse_transform = Game::std_transform()
+            //	.trans(cursor.x as f64, cursor.y as f64)
+			//	.rot_rad(rotation)//.trans(-25.0, -25.0)
+			//	;
 
             // Draw a box rotating around the middle of the screen.
-            const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-            rectangle(RED, mouse_square, mouse_transform, gl);*/
+            //const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+            //rectangle(RED, mouse_square, mouse_transform, gl);
 
             text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
                                                                      glyph_cache,
@@ -398,10 +406,102 @@ impl<'a> Game<'a> {
         // Test with toggle
         self.game_state.game_over = !self.game_state.game_over;
     }
-}
+}*/
 
 fn main() {
 
+    let opengl = OpenGL::V3_2;
+    let samples = 4;
+    let mut window: GlutinWindow = WindowSettings::new(
+            "piston: draw_state",
+            [600, 600]
+        )
+        .exit_on_esc(true)
+        .samples(samples)
+        .opengl(opengl)
+        .build()
+        .unwrap();
+
+    let (mut device, mut factory) = gfx_device_gl::create(|s|
+        window.get_proc_address(s) as *const std::os::raw::c_void);
+
+    let draw_size = window.draw_size();
+    let aa = samples as gfx::texture::NumSamples;
+    let dim = (draw_size.width as u16, draw_size.height as u16, 1, aa.into());
+    let color_format = <Srgba8 as Formatted>::get_format();
+    let depth_format = <DepthStencil as Formatted>::get_format();
+    let (output_color, output_stencil) =
+        gfx_device_gl::create_main_targets_raw(dim,
+                                               color_format.0,
+                                               depth_format.0);
+    let output_color = Typed::new(output_color);
+    let output_stencil = Typed::new(output_stencil);
+
+    let assets = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets").unwrap();
+    let blends = [Blend::Alpha, Blend::Add, Blend::Invert, Blend::Multiply];
+    let mut blend = 0;
+    let mut clip_inside = true;
+    let rust_logo = Texture::from_path(&mut factory,
+                                       assets.join("rust.png"),
+                                       Flip::None,
+                                       &TextureSettings::new()).unwrap();
+
+    let mut encoder = factory.create_command_buffer().into();
+    let mut g2d = Gfx2d::new(opengl, &mut factory);
+    let mut events = Events::new(EventSettings::new().lazy(true));
+    while let Some(e) = events.next(&mut window) {
+        if let Some(args) = e.render_args() {
+            g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
+                let blah = RenderState<'a> { g };
+
+                clear([0.8, 0.8, 0.8, 1.0], g);
+                Rectangle::new([1.0, 0.0, 0.0, 1.0])
+                    .draw([0.0, 0.0, 100.0, 100.0], &c.draw_state, c.transform, g);
+
+                let draw_state = c.draw_state.blend(blends[blend]);
+                Rectangle::new([0.5, 1.0, 0.0, 0.3])
+                    .draw([50.0, 50.0, 100.0, 100.0], &draw_state, c.transform, g);
+
+                let transform = c.transform.trans(100.0, 100.0);
+                // Compute clip rectangle from upper left corner.
+                let (clip_x, clip_y, clip_w, clip_h) = (100, 100, 100, 100);
+                let (clip_x, clip_y, clip_w, clip_h) =
+                    (clip_x, c.viewport.unwrap().draw_size[1] - clip_y - clip_h, clip_w, clip_h);
+                let clipped = c.draw_state.scissor([clip_x, clip_y, clip_w, clip_h]);
+                Image::new().draw(&rust_logo, &clipped, transform, g);
+
+                let transform = c.transform.trans(200.0, 200.0);
+                Ellipse::new([1.0, 0.0, 0.0, 1.0])
+                    .draw([0.0, 0.0, 50.0, 50.0], &DrawState::new_clip(), transform, g);
+                Image::new().draw(&rust_logo,
+                    &if clip_inside { DrawState::new_inside() }
+                    else { DrawState::new_outside() },
+                    transform, g);
+            });
+            encoder.flush(&mut device);
+        }
+
+        if let Some(_) = e.after_render_args() {
+            device.cleanup();
+        }
+
+        if let Some(Button::Keyboard(Key::A)) = e.press_args() {
+            blend = (blend + 1) % blends.len();
+            println!("Changed blending to {:?}", blends[blend]);
+        }
+
+        if let Some(Button::Keyboard(Key::S)) = e.press_args() {
+            clip_inside = !clip_inside;
+            if clip_inside {
+                println!("Changed to clip inside");
+            } else {
+                println!("Changed to clip outside");
+            }
+        }
+    }
+
+/*
     let mut window: GameWindow = WindowSettings::new(
             "Irradiant Descent",
             [1920, 1080]
@@ -467,6 +567,7 @@ fn main() {
         e.text(|text| println!("Typed '{}'", text));
         e.resize(|w, h| println!("Resized '{}, {}'", w, h));
     }
+    */
 }
 
 #[allow(deprecated)]
