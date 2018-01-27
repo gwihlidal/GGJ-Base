@@ -82,9 +82,9 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 	(p + Point::new(aspect, 1.0)) / Point::new(aspect * 2.0, 2.0)
 }
 
-impl<'a, F, R> Game<'a, F, R>
-where R: gfx::Resources {
-    fn new(factory: &gfx_device_gl::Factory, window: &GlutinWindow, glyphs: GlyphCache<'a, F, R>) -> Game<'a, F, R> {
+impl<'a, F> Game<'a, F, gfx_device_gl::Resources>
+{
+    fn new(factory: &mut gfx_device_gl::Factory, window: &GlutinWindow, glyphs: GlyphCache<'a, F, gfx_device_gl::Resources>) -> Game<'a, F, gfx_device_gl::Resources> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
 
         Game {
@@ -102,7 +102,7 @@ where R: gfx::Resources {
             glyph_cache: glyphs,
             assets: Assets {
                 game_over: Texture::from_path(
-                    &mut factory,
+                    factory,
                     &Path::new("./assets/GameOver.png"),
                     Flip::None,
                     &TextureSettings::new()
@@ -198,7 +198,7 @@ where R: gfx::Resources {
         self.game_state.pigeon_timer += args.dt;
     }
 
-    fn render_pigeon(assets: &Assets<R>, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
+    fn render_pigeon(assets: &Assets<gfx_device_gl::Resources>, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
         use graphics::*;
         use geometry::traits::Position;
 
@@ -284,7 +284,7 @@ where R: gfx::Resources {
 	    }
     }*/
 
-    fn render(assets: &Assets<R>, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache<'a, F, R>, args: &RenderArgs, _cursor: Point) {
+    fn render(assets: &Assets<gfx_device_gl::Resources>, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache<'a, F, gfx_device_gl::Resources>, args: &RenderArgs, _cursor: Point) {
         use graphics::*;
         let _mouse_square = rectangle::square(0.0, 0.0, 0.1);
         let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
@@ -332,12 +332,12 @@ where R: gfx::Resources {
 
         let pigeons = &game_state.pigeons;
         for pigeon in pigeons.iter() {
-            Game::render_pigeon(assets, render_state, game_state, args, pigeon);
+            Self::render_pigeon(assets, render_state, game_state, args, pigeon);
         }
 
         let coops = &game_state.coops;
         for coop in coops.iter() {
-            Game::render_coop(render_state, args, coop);
+            Self::render_coop(render_state, args, coop);
         }
 
         // Full Screen UI
@@ -404,7 +404,7 @@ fn main() {
     let (mut device, mut factory) = gfx_device_gl::create(|s|
         window.get_proc_address(s) as *const std::os::raw::c_void);
 
-        factory.FUCKYOUYOUFUCKINGFUCKERFUCK();
+        //factory.FUCKYOUYOUFUCKINGFUCKERFUCK();
 
     let draw_size = window.draw_size();
     let aa = samples as gfx::texture::NumSamples;
