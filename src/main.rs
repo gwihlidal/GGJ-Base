@@ -30,6 +30,7 @@ use scalar_field::*;
 
 #[macro_use]
 pub mod geometry;
+use geometry::point::{Point};
 
 #[macro_use]
 pub mod models;
@@ -64,6 +65,10 @@ use models::pigeon::Pigeon;
 use models::coop::Coop;
 use geometry::traits::Collide;
 
+pub struct PigeonTrajectory {
+	points: Vec<Point>
+}
+
 pub struct RenderState {
     gl: GlGraphics // OpenGL drawing backend.
 }
@@ -73,6 +78,7 @@ pub struct GameState {
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
     irradiance_field: ScalarField,
+    aim_trajectory: PigeonTrajectory,
 }
 
 pub struct Game {
@@ -93,6 +99,7 @@ impl Game {
             	pigeons: Vec::new(),
             	coops: Vec::new(),
             	irradiance_field: sf,
+            	aim_trajectory: PigeonTrajectory { points: Vec::new() },
             }
         }
     }
@@ -109,9 +116,14 @@ impl Game {
         self.game_state.coops.push(Coop::new(pos_coop));
     }
 
-    fn update(&mut self, args: &UpdateArgs) {
+    fn simulate_trajectory(&mut self, _mouse_x: f64, _mouse_y: f64) {
+
+    }
+
+    fn update(&mut self, args: &UpdateArgs, mouse_x: f64, mouse_y: f64) {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
+        self.simulate_trajectory(mouse_x, mouse_y);
     }
 
     fn render_pigeon(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
@@ -224,7 +236,7 @@ fn main() {
         }
 
         if let Some(u) = e.update_args() {
-            game.update(&u);
+            game.update(&u, cursor[0], cursor[1]);
         }
 
         if let Some(cursor) = e.cursor_args() {
