@@ -38,7 +38,8 @@ impl ScalarField {
 			for x in 0..self.width {
 				let xd = x as f32 - pos.x;
 				let yd = y as f32 - pos.y;
-				self.values[y * self.width + x] += smoothstep(radius, 0.0f32, (xd * xd + yd * yd).sqrt());
+				//self.values[y * self.width + x] += smoothstep(radius, 0.0f32, (xd * xd + yd * yd).sqrt());
+				self.values[y * self.width + x] += (-(xd * xd + yd * yd) / (radius * radius)).exp();
 			}
 		}
 	}
@@ -52,9 +53,12 @@ impl ScalarField {
 	pub fn to_image_buffer(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
 		let mut res = vec![0u8; (self.width * self.height * 4) as usize];
 		for i in 0..self.width * self.height {
-			res[i * 4 + 0] = (smoothstep(0.0, 1.0, self.values[i]) * 0.8f32 * 255f32) as u8;
-			res[i * 4 + 1] = (smoothstep(0.0, 0.5, self.values[i]) * 0.8f32 * 255f32) as u8;
-			res[i * 4 + 2] = 32u8;
+			let bg = 4u8;
+			let fg = (255 - bg) as f32;
+			res[i * 4 + 0] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.8f32 * fg) as u8;
+			//res[i * 4 + 1] = bg + (smoothstep(0.0, 0.5, self.values[i]) * 0.8f32 * 220f32) as u8;
+			res[i * 4 + 1] = res[i * 4 + 0];
+			res[i * 4 + 2] = res[i * 4 + 0];
 			res[i * 4 + 3] = 255u8;
 		}
 		ImageBuffer::from_raw(self.width as u32, self.height as u32, res).unwrap()

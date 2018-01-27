@@ -157,12 +157,12 @@ impl<'a> Game<'a> {
     fn update(&mut self, args: &UpdateArgs, cursor: Point) {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
-        self.game_state.irradiance_field.decay(0.995f32);
+        self.game_state.irradiance_field.decay(0.998f32);
 
         let mut pigeon_to_nuke = None;
         for i in 0..self.game_state.pigeons.len() {
         	let mut pigeon = &mut self.game_state.pigeons[i];
-            if let PigeonStatus::ReachedDestination = pigeon.update((0.6 * args.dt) as f32) {
+            if let PigeonStatus::ReachedDestination = pigeon.update((1.0 * args.dt) as f32) {
             	pigeon_to_nuke = Some(i);
             }
         }
@@ -203,7 +203,7 @@ impl<'a> Game<'a> {
         use graphics::*;
         use geometry::traits::Position;
 
-        const ORANGE:  [f32; 4] = [1.0, 0.5647, 0.0039, 1.0];
+        const color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         use graphics::math::Vec2d;
 
         render_state.gl.draw(args.viewport(), |_c, gl| {
@@ -218,7 +218,7 @@ impl<'a> Game<'a> {
                 transform = transform.rot_rad(dir as f64);
             }
 
-            graphics::polygon(ORANGE, &pentagon, transform, gl);
+            graphics::polygon(color, &pentagon, transform, gl);
         });
     }
 
@@ -236,7 +236,7 @@ impl<'a> Game<'a> {
     	use graphics::*;
 
     	for i in 1..trajectory.points.len() {
-	    	Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.001).draw([
+	    	Line::new([1.0f32, 0.1f32, 0.02f32, 1.0f32], 0.005).draw([
 	    		trajectory.points[i-1].x as f64,
 	    		trajectory.points[i-1].y as f64,
 	    		trajectory.points[i].x as f64,
