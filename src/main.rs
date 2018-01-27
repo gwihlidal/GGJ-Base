@@ -9,6 +9,7 @@ extern crate ncollide;
 extern crate ai_behavior;
 extern crate sprite;
 extern crate rand;
+extern crate image;
 
 #[cfg(feature="piston")] #[macro_use] extern crate conrod;
 #[cfg(feature="piston")] mod support;
@@ -22,6 +23,9 @@ extern crate glutin_window;
 
 pub mod object;
 //use object::Object;
+
+mod scalar_field;
+use scalar_field::*;
 
 #[macro_use]
 pub mod geometry;
@@ -91,12 +95,12 @@ impl Game {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
     }
-
+    
     fn render_pigeon(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
         use graphics::*;
         use geometry::traits::Position;
 
-        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+        const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
         render_state.gl.draw(args.viewport(), |c, gl| {
             let square = graphics::rectangle::square(0.0, 0.0, 50.0);
             let rotation = game_state.rotation;
@@ -107,14 +111,36 @@ impl Game {
             let transform = c.transform.trans(_pigeon.x() as f64, _pigeon.y() as f64)
                                         .rot_rad(rotation)
                                         .trans(-25.0, -25.0);
-            graphics::rectangle(RED, square, transform, gl);
+            graphics::rectangle(BLUE, square, transform, gl);
         });
     }
 
-    fn render(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs) {
+    fn render(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
+        
+        let mouse_square = rectangle::square(0.0, 0.0, 50.0);
+        
+        let mut sf = ScalarField::new(16 * 4, 9 * 4);
+        sf.splat(10, 10, 7f32);
+        sf.splat(40, 30, 7f32);
+
+        let texture = Texture::from_image(
+            &sf.to_image_buffer(),
+            &TextureSettings::new()
+        );
+        
         render_state.gl.draw(args.viewport(), |_c, gl| {
-            const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-            graphics::clear(GREEN, gl);
+            Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
+			    &texture,
+			    &Default::default(),
+			    graphics::math::identity().trans(-1.0, -1.0).scale(2.0 / sf.width as f64, 2.0 / sf.height as f64),
+			    gl
+			);
+            let mouse_transform = c.transform.trans(mouse_x, mouse_y)
+                                       .rot_rad(rotation)
+                                       .trans(-25.0, -25.0);
+                                       
+            // Draw a box rotating around the middle of the screen.
+            rectangle(RED, mouse_square, mouse_transform, gl);
         });
 
         let pigeons = &game_state.pigeons;
@@ -153,7 +179,7 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            Game::render(&mut game.render_state, &game.game_state, &r);
+            Game::render(&mut game.render_state, &game.game_state, &r, cursor[0], cursor[1]);
         }
 
         if let Some(u) = e.update_args() {
