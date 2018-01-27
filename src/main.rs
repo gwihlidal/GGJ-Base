@@ -78,10 +78,11 @@ pub struct GameState {
     irradiance_field: ScalarField,
     aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
+    game_over: bool,
 }
 
 pub struct Assets {
-    game_over: Option<Texture>
+    game_over: Texture
 }
 
 pub struct Game<'a> {
@@ -111,11 +112,15 @@ impl<'a> Game<'a> {
             	coops: Vec::new(),
             	irradiance_field: sf,
             	aim_trajectory: Trajectory { points: Vec::new() },
+            	game_over: false
             	selected_coop: None,
             },
             glyph_cache: glyphs,
             assets: Assets {
-                game_over: None
+                game_over: Texture::from_path(
+                    &Path::new("./assets/GameOver.png"),
+                    &TextureSettings::new()
+                ).unwrap()
             }
         }
     }
@@ -131,9 +136,7 @@ impl<'a> Game<'a> {
         let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
 
-        self.assets.game_over = Some(Texture::from_path(
-                            &Path::new("./assets/GameOver1.png"),
-                            &TextureSettings::new()).unwrap());
+
     }
 
     fn simulate_trajectory(&self, origin: Point, cursor: Point) -> Trajectory {
@@ -245,6 +248,7 @@ impl<'a> Game<'a> {
     fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, _cursor: Point) {
         use graphics::*;
         let _mouse_square = rectangle::square(0.0, 0.0, 0.1);
+        let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
 
         render_state.gl.draw(args.viewport(), |c, gl| {
         	let sf = &game_state.irradiance_field;
@@ -253,7 +257,6 @@ impl<'a> Game<'a> {
 	            &TextureSettings::new()
 	        );
 
-	        let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
             Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
 			    &sf_texture,
 			    &Default::default(),
@@ -278,7 +281,7 @@ impl<'a> Game<'a> {
             const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
             rectangle(RED, mouse_square, mouse_transform, gl);*/
 
-            text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("PIGEON SIMULATOR 2018",
+            text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
                                                                      glyph_cache,
                                                                      &DrawState::default(),
                                                                      c.transform
@@ -294,6 +297,14 @@ impl<'a> Game<'a> {
         let coops = &game_state.coops;
         for coop in coops.iter() {
             Game::render_coop(render_state, args, coop);
+        }
+
+        // Full Screen UI
+        if game_state.game_over {
+            render_state.gl.draw(args.viewport(), |_c, gl| {
+                let gui_transform = scale_0_to_1.flip_v().trans(0.0, -1.0).scale(1.0 / 1920.0 as f64, 1.0 / 1080.0 as f64);
+                image(&_assets.game_over, gui_transform, gl);
+            });
         }
     }
 
@@ -324,6 +335,11 @@ impl<'a> Game<'a> {
         }
 
         self.game_state.selected_coop = None;
+    }
+
+    fn on_game_over(&mut self) {
+        // Test with toggle
+        self.game_state.game_over = !self.game_state.game_over;
     }
 }
 
@@ -376,6 +392,10 @@ fn main() {
         if let Some(Button::Keyboard(key)) = e.press_args() {
             if key == Key::C {
                 pigeon_sound();
+            }
+
+            if key == Key::G {
+                game.on_game_over();
             }
         }
 
