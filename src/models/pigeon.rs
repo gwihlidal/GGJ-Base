@@ -26,6 +26,10 @@ impl Pigeon {
         Pigeon { vector, trajectory: None, trajectory_pos: 0 }
     }
 
+    pub fn calculate_rotation(move_vec: Point) -> f32 {
+        f32::atan2(move_vec.y, move_vec.x)
+    }
+
     /// Update the pigeon's position
     pub fn update(&mut self, units: f32) -> PigeonStatus {
         if let Some(ref traj) = self.trajectory {
@@ -52,6 +56,7 @@ impl Pigeon {
             if dist < 1e-3 {
                 PigeonStatus::ReachedDestination
             } else {
+                self.vector.direction = Pigeon::calculate_rotation(target);
                 PigeonStatus::JustPigeoning
             }
         } else {

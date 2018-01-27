@@ -193,14 +193,14 @@ impl<'a> Game<'a> {
         }
     }
 
-    fn render_pigeon(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
+    fn render_pigeon(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
         use graphics::*;
         use geometry::traits::Position;
 
         const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
         render_state.gl.draw(args.viewport(), |_c, gl| {
             let square = graphics::rectangle::square(0.0, 0.0, 0.1);
-            let rotation = game_state.rotation;
+            let rotation = pigeon.vector.direction as f64;
 
             //let (x, y) = ((args.width  / 2) as f64,
              //             (args.height / 2) as f64);
@@ -208,7 +208,7 @@ impl<'a> Game<'a> {
 
 
             let transform = Game::std_transform()
-				.trans(_pigeon.x() as f64, _pigeon.y() as f64)
+				.trans(pigeon.x() as f64, pigeon.y() as f64)
 				.rot_rad(rotation)
 				.trans(-0.05, -0.05);
 
