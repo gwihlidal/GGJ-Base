@@ -1,51 +1,5 @@
 #![allow(dead_code)]
-
-/*
-extern crate piston;
-extern crate graphics;
-//extern crate opengl_graphics;
-extern crate find_folder;
-extern crate nalgebra;
-extern crate ncollide;
-extern crate ai_behavior;
-extern crate sprite;
-extern crate rand;
-extern crate image;
-extern crate rodio;
-extern crate gfx_graphics;
-extern crate gfx;
-extern crate gfx_device_gl;*/
-
-//#[cfg(feature="piston")] #[macro_use] extern crate conrod;
-//#[cfg(feature="piston")] mod support;
-//pub mod object;
-//use object::Object;
-
-//mod scalar_field;
-//use scalar_field::*;
-
-//#[macro_use]
-//pub mod geometry;
-//use geometry::point::{Point};
-
-//#[macro_use]
-//pub mod models;
-
-//#[allow(unused_imports)]
-//use piston::window::{ OpenGLWindow, AdvancedWindow, Window, WindowSettings };
-//use piston::event_loop::*;
-//use piston::input::*;
-
-//#[allow(unused_imports)]
-//use opengl_graphics::{ GlGraphics, Texture, TextureSettings, OpenGL, GlyphCache };
-
-//#[allow(unused_imports)]
-//use graphics::math::Matrix2d;
-
-
-//use models::pigeon::*;
-//use models::coop::Coop;
-//use geometry::traits::Collide;
+#![allow(unused_imports)]
 
 extern crate glutin_window;
 extern crate piston;
@@ -56,6 +10,7 @@ extern crate gfx;
 extern crate gfx_device_gl;
 extern crate rodio;
 extern crate rand;
+extern crate image;
 
 use std::path::Path;
 use std::io::BufReader;
@@ -73,16 +28,30 @@ use graphics::*;
 use piston::input::*;
 use gfx_graphics::*;
 
-use GfxGraphics<'_, gfx_device_gl::Resources, gfx_device_gl::CommandBuffer> as GraphicsObj;
+mod scalar_field;
+use scalar_field::*;
 
+#[macro_use]
+pub mod geometry;
+use geometry::point::{Point};
 
-pub struct RenderState<'a> {
-    g: &'a mut GfxGraphics<'a, gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>,
+#[macro_use]
+pub mod models;
+
+#[allow(unused_imports)]
+use graphics::math::Matrix2d;
+
+use models::pigeon::*;
+use models::coop::Coop;
+use geometry::traits::Collide;
+
+use gfx_device_gl::Factory as FUCKYOU;
+
+pub struct RenderState {
+   // g: &'a mut GfxGraphics<'a, gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>,
 }
 
-/*
 pub struct GameState {
-    rotation: f64,   // Rotation for the square
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
     irradiance_field: ScalarField,
@@ -93,17 +62,19 @@ pub struct GameState {
     pigeon_timer: f64,
 }
 
-pub struct Assets {
-    game_over: Texture,
+pub struct Assets<R>
+where R: gfx::Resources {
+    game_over: Texture<R>,
     pigeon_points_f0: Vec<(geometry::Point, geometry::Point)>,
     pigeon_points_f1: Vec<(geometry::Point, geometry::Point)>,
 }
 
-pub struct Game<'a> {
+pub struct Game<'a, F, R>
+where R: gfx::Resources {
     render_state: RenderState,
     game_state: GameState,
-    glyph_cache: GlyphCache<'a>,
-    assets: Assets,
+    glyph_cache: GlyphCache<'a, F, R>,
+    assets: Assets<R>,
 }
 
 fn pos_to_irradiance_coord(p: Point) -> Point {
@@ -111,14 +82,14 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 	(p + Point::new(aspect, 1.0)) / Point::new(aspect * 2.0, 2.0)
 }
 
-impl<'a> Game<'a> {
-    fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
+impl<'a, F, R> Game<'a, F, R>
+where R: gfx::Resources {
+    fn new(factory: &gfx_device_gl::Factory, window: &GlutinWindow, glyphs: GlyphCache<'a, F, R>) -> Game<'a, F, R> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
 
         Game {
-            render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
+            render_state: RenderState { },//gl: GlGraphics::new(OpenGL::V3_2) },
             game_state: GameState {
-            	rotation: 0.0,
             	pigeons: Vec::new(),
             	coops: Vec::new(),
             	irradiance_field: sf,
@@ -131,7 +102,9 @@ impl<'a> Game<'a> {
             glyph_cache: glyphs,
             assets: Assets {
                 game_over: Texture::from_path(
+                    &mut factory,
                     &Path::new("./assets/GameOver.png"),
+                    Flip::None,
                     &TextureSettings::new()
                 ).unwrap(),
                 pigeon_points_f0: Vec::new(),
@@ -140,7 +113,7 @@ impl<'a> Game<'a> {
         }
     }
 
-    fn on_load(&mut self, _w: &GameWindow) {
+    fn on_load(&mut self, _w: &GlutinWindow) {
         let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
 
@@ -195,7 +168,7 @@ impl<'a> Game<'a> {
 
     fn update(&mut self, args: &UpdateArgs, cursor: Point) {
         // Rotate 2 radians per second.
-        self.game_state.rotation += 2.0 * args.dt;
+        //self.game_state.rotation += 2.0 * args.dt;
 
         // Radioactive decay
         self.game_state.irradiance_field.decay(0.998f32);
@@ -225,10 +198,11 @@ impl<'a> Game<'a> {
         self.game_state.pigeon_timer += args.dt;
     }
 
-    fn render_pigeon(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
+    fn render_pigeon(assets: &Assets<R>, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
         use graphics::*;
         use geometry::traits::Position;
 
+/*
         const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
         render_state.gl.draw(args.viewport(), |_c, gl| {
             let square = graphics::rectangle::square(0.0, 0.0, 0.1);
@@ -259,6 +233,7 @@ impl<'a> Game<'a> {
                 ], &Default::default(), transform, gl);
             }
         });
+    */
     }
 
     fn render_coop(render_state: &mut RenderState, args: &RenderArgs, _coop: &Coop) {
@@ -268,6 +243,7 @@ impl<'a> Game<'a> {
         const color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         use graphics::math::Vec2d;
 
+    /*
         render_state.gl.draw(args.viewport(), |_c, gl| {
 
             let mut transform = Game::std_transform()
@@ -282,6 +258,7 @@ impl<'a> Game<'a> {
 
             graphics::polygon(color, &pentagon, transform, gl);
         });
+    */
     }
 
     fn std_transform() -> Matrix2d {
@@ -290,7 +267,7 @@ impl<'a> Game<'a> {
     	graphics::math::identity().scale(1.0 / aspect, 1.0)
     }
 
-    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory) {
+    /*fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory) {
     	if trajectory.points.len() < 2 {
     		return;
     	}
@@ -305,13 +282,14 @@ impl<'a> Game<'a> {
 	    		trajectory.points[i].y as f64,
 	    	], &Default::default(), Game::std_transform(), gl);
 	    }
-    }
+    }*/
 
-    fn render(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, _cursor: Point) {
+    fn render(assets: &Assets<R>, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache<'a, F, R>, args: &RenderArgs, _cursor: Point) {
         use graphics::*;
         let _mouse_square = rectangle::square(0.0, 0.0, 0.1);
         let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
 
+    /*
         render_state.gl.draw(args.viewport(), |c, gl| {
         	let sf = &game_state.irradiance_field;
 	        let sf_texture = Texture::from_image(
@@ -350,6 +328,7 @@ impl<'a> Game<'a> {
                                                                          .trans(10.0, 100.0),
                                                                      gl).unwrap();
         });
+    */
 
         let pigeons = &game_state.pigeons;
         for pigeon in pigeons.iter() {
@@ -362,7 +341,7 @@ impl<'a> Game<'a> {
         }
 
         // Full Screen UI
-        if game_state.game_over {
+        /*if game_state.game_over {
             render_state.gl.draw(args.viewport(), |_c, gl| {
                 let gui_transform = scale_0_to_1
                 	.flip_v()
@@ -370,7 +349,7 @@ impl<'a> Game<'a> {
                 	.scale(1.0 / assets.game_over.get_width() as f64, 1.0 / assets.game_over.get_height() as f64);
                 image(&assets.game_over, gui_transform, gl);
             });
-        }
+        }*/
     }
 
     fn on_mouse_move(&mut self, mouse: [f64;2]) {
@@ -406,15 +385,15 @@ impl<'a> Game<'a> {
         // Test with toggle
         self.game_state.game_over = !self.game_state.game_over;
     }
-}*/
+}
 
 fn main() {
 
     let opengl = OpenGL::V3_2;
     let samples = 4;
     let mut window: GlutinWindow = WindowSettings::new(
-            "piston: draw_state",
-            [600, 600]
+            "Irradiant Descent",
+            [1920, 1080]
         )
         .exit_on_esc(true)
         .samples(samples)
@@ -424,6 +403,8 @@ fn main() {
 
     let (mut device, mut factory) = gfx_device_gl::create(|s|
         window.get_proc_address(s) as *const std::os::raw::c_void);
+
+        factory.FUCKYOUYOUFUCKINGFUCKERFUCK();
 
     let draw_size = window.draw_size();
     let aa = samples as gfx::texture::NumSamples;
@@ -453,7 +434,6 @@ fn main() {
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
             g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
-                let blah = RenderState<'a> { g };
 
                 clear([0.8, 0.8, 0.8, 1.0], g);
                 Rectangle::new([1.0, 0.0, 0.0, 1.0])

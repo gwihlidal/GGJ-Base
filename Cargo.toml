@@ -26,6 +26,7 @@ gfx_device_gl = "0.15.0"
 piston2d-gfx_graphics = "0.48.0"
 rodio = "0.5.2"
 rand = "0.3.14"
+image = "0.18.0"
 
 [dependencies.piston2d-graphics]
 version = "0.24.0"
