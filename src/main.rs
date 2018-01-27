@@ -112,7 +112,7 @@ impl<'a> Game<'a> {
             	coops: Vec::new(),
             	irradiance_field: sf,
             	aim_trajectory: Trajectory { points: Vec::new() },
-            	game_over: false
+            	game_over: false,
             	selected_coop: None,
             },
             glyph_cache: glyphs,
