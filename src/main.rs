@@ -59,6 +59,8 @@ use glfw_window::GlfwWindow as GameWindow;
 use glutin_window::GlutinWindow as GameWindow;
 
 use models::pigeon::Pigeon;
+use models::coop::Coop;
+use geometry::traits::Collide;
 
 pub struct RenderState {
     gl: GlGraphics // OpenGL drawing backend.
@@ -67,6 +69,7 @@ pub struct RenderState {
 pub struct GameState {
     rotation: f64,   // Rotation for the square
     pigeons: Vec<Pigeon>,
+    coops: Vec<Coop>,
 }
 
 pub struct Game {
@@ -78,7 +81,7 @@ impl Game {
     fn new() -> Game {
         Game {
             render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
-            game_state: GameState { rotation: 0.0, pigeons: Vec::new() }
+            game_state: GameState { rotation: 0.0, pigeons: Vec::new(), coops: Vec::new() }
         }
     }
 
@@ -89,6 +92,9 @@ impl Game {
             direction: 0.0
         };
         self.game_state.pigeons.push(Pigeon::new(pos));
+
+        let pos_coop = geometry::Point::new(200.0, 200.0);
+        self.game_state.coops.push(Coop::new(pos_coop));
     }
 
     fn update(&mut self, args: &UpdateArgs) {
@@ -112,6 +118,20 @@ impl Game {
                                         .rot_rad(rotation)
                                         .trans(-25.0, -25.0);
             graphics::rectangle(BLUE, square, transform, gl);
+        });
+    }
+
+    fn render_coop(render_state: &mut RenderState, args: &RenderArgs, _coop: &Coop) {
+        use graphics::*;
+        use geometry::traits::Position;
+
+        const ORANGE:  [f32; 4] = [1.0, 0.5647, 0.0039, 1.0];
+        render_state.gl.draw(args.viewport(), |c, gl| {
+            let square = graphics::rectangle::square(0.0, 0.0, (_coop.radius()*2.0) as f64);
+
+            let transform = c.transform.trans(_coop.x() as f64, _coop.y() as f64)
+                                        .trans(-_coop.radius() as f64, -_coop.radius() as f64);
+            graphics::rectangle(ORANGE, square, transform, gl);
         });
     }
 
@@ -150,6 +170,11 @@ impl Game {
         let pigeons = &game_state.pigeons;
         for pigeon in pigeons.iter() {
             Game::render_pigeon(render_state, game_state, args, pigeon);
+        }
+
+        let coops = &game_state.coops;
+        for coop in coops.iter() {
+            Game::render_coop(render_state, args, coop);
         }
     }
 }
