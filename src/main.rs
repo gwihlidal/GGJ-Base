@@ -82,7 +82,8 @@ pub struct GameState {
 }
 
 pub struct Assets {
-    game_over: Texture
+    game_over: Texture,
+    pigeon_points_f0: Vec<(geometry::Point, geometry::Point)>
 }
 
 pub struct Game<'a> {
@@ -118,7 +119,8 @@ impl<'a> Game<'a> {
                 game_over: Texture::from_path(
                     &Path::new("./assets/GameOver.png"),
                     &TextureSettings::new()
-                ).unwrap()
+                ).unwrap(),
+                pigeon_points_f0: Vec::new()
             }
         }
     }
@@ -126,6 +128,18 @@ impl<'a> Game<'a> {
     fn on_load(&mut self, _w: &GameWindow) {
         let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
+
+       // let mut pigeon_points : Vec<(geometry::Point, geometry::Point)> = Vec::new();
+
+        self.assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
+        self.assets.pigeon_points_f0.push((Point::new(100.0, 442.043),   Point::new(250.443, 57.113)));
+        self.assets.pigeon_points_f0.push((Point::new(250.443, 57.113),  Point::new(400.0, 442.043)));
+        self.assets.pigeon_points_f0.push((Point::new(309.156, 205.907), Point::new(445.678, 147.404)));
+        self.assets.pigeon_points_f0.push((Point::new(445.678, 147.404), Point::new(375.655, 376.547)));
+        self.assets.pigeon_points_f0.push((Point::new(375.655, 376.547), Point::new(309.156, 205.907)));
+        self.assets.pigeon_points_f0.push((Point::new(191.678, 205.907), Point::new(55.156, 147.404)));
+        self.assets.pigeon_points_f0.push((Point::new(55.156, 147.404),  Point::new(125.179, 376.547)));
+        self.assets.pigeon_points_f0.push((Point::new(125.179, 376.547), Point::new(191.678, 205.907)));
     }
 
     fn simulate_trajectory(&self, origin: Point, cursor: Point) -> Trajectory {
@@ -179,7 +193,7 @@ impl<'a> Game<'a> {
         }
     }
 
-    fn render_pigeon(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
+    fn render_pigeon(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
         use graphics::*;
         use geometry::traits::Position;
 
@@ -191,11 +205,23 @@ impl<'a> Game<'a> {
             //let (x, y) = ((args.width  / 2) as f64,
              //             (args.height / 2) as f64);
 
+
+
             let transform = Game::std_transform()
 				.trans(_pigeon.x() as f64, _pigeon.y() as f64)
 				.rot_rad(rotation)
 				.trans(-0.05, -0.05);
-            graphics::rectangle(BLUE, square, transform, gl);
+
+            let scale = 0.00023;
+            for i in 0..assets.pigeon_points_f0.len() {
+                let (s, e) = assets.pigeon_points_f0[i];
+                graphics::Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.002).draw([
+                    (s.x - 256.0) as f64 * scale,
+                    (s.y - 256.0) as f64 * -scale,
+                    (e.x - 256.0) as f64 * scale,
+                    (e.y - 256.0) as f64 * -scale,
+                ], &Default::default(), transform, gl);
+            }
         });
     }
 
@@ -245,7 +271,7 @@ impl<'a> Game<'a> {
 	    }
     }
 
-    fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, _cursor: Point) {
+    fn render(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, _cursor: Point) {
         use graphics::*;
         let _mouse_square = rectangle::square(0.0, 0.0, 0.1);
         let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
@@ -291,7 +317,7 @@ impl<'a> Game<'a> {
 
         let pigeons = &game_state.pigeons;
         for pigeon in pigeons.iter() {
-            Game::render_pigeon(render_state, game_state, args, pigeon);
+            Game::render_pigeon(assets, render_state, game_state, args, pigeon);
         }
 
         let coops = &game_state.coops;
@@ -305,8 +331,8 @@ impl<'a> Game<'a> {
                 let gui_transform = scale_0_to_1
                 	.flip_v()
                 	.trans(0.0, -1.0)
-                	.scale(1.0 / _assets.game_over.get_width() as f64, 1.0 / _assets.game_over.get_height() as f64);
-                image(&_assets.game_over, gui_transform, gl);
+                	.scale(1.0 / assets.game_over.get_width() as f64, 1.0 / assets.game_over.get_height() as f64);
+                image(&assets.game_over, gui_transform, gl);
             });
         }
     }
