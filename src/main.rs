@@ -101,7 +101,7 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 impl<'a> Game<'a> {
     fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
-		sf.splat(pos_to_irradiance_coord(Point::new(0f32, 0f32)), 9f32);
+		sf.splat(pos_to_irradiance_coord(Point::new(0f32, 0.5f32)), 7f32);
 
         Game {
             render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
