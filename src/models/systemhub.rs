@@ -23,10 +23,12 @@ pub struct SystemHub {
     color: [f32; 4]
 }
 
+const DEFAULT_DISTRESS_LEVEL_DELTA : f32 = 0.002;
+
 impl SystemHub {
     /// Create a SystemHub
     pub fn new(position: Point, size: Size, name: String) -> SystemHub {
-        SystemHub { name: name, distress_level: 0.0, distress_level_delta: 0.001,
+        SystemHub { name: name, distress_level: 0.0, distress_level_delta: DEFAULT_DISTRESS_LEVEL_DELTA,
                     color: [1.0,0.0,1.0,1.0],
                     hub: SelectableRect::new(position, size, ||{}) } // There is an empty closure! :3
     }
@@ -54,6 +56,11 @@ pub struct SystemHubCollection {
     breaking_change: f32
 }
 
+pub enum PigeonAcceptanceLevel {
+    Adequate,
+    GetRekd,
+}
+
 impl SystemHubCollection {
     /// Create a set of SystemHubs
     pub fn new() -> SystemHubCollection {
@@ -61,15 +68,26 @@ impl SystemHubCollection {
         SystemHubCollection { systems: Vec::new(), breaking_change: 0.005 }
     }
 
+    pub fn please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(&mut self, pos: Point) -> PigeonAcceptanceLevel {
+        for hub in self.systems.iter_mut() {
+            if hub.hub.contains_point(pos) {
+                hub.distress_level = 0.0;
+                hub.distress_level_delta = DEFAULT_DISTRESS_LEVEL_DELTA;
+                return PigeonAcceptanceLevel::Adequate;
+            }
+        }
+
+        PigeonAcceptanceLevel::GetRekd
+    }
+
     pub fn init(&mut self) {
+        let pos = Point::new(0.0, 0.0);
+        let size = Size::new(0.4, 0.2);
+        self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
 
-        let pos1 = Point::new(0.0, 0.0);
-        let size1 = Size::new(0.2, 0.1);
-        self.systems.push(SystemHub::new(pos1, size1, "Reactor Chamber".to_string()));
-
-        let pos2 = Point::new(0.5, 0.3);
-        let size2 = Size::new(0.4, 0.2);
-        self.systems.push(SystemHub::new(pos2, size2, "Kitchen".to_string()));
+        let pos = Point::new(0.6, 0.3);
+        let size = Size::new(0.4, 0.3);
+        self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
     }
 
     pub fn update_systems(&mut self, args: &UpdateArgs) {

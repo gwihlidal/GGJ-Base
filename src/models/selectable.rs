@@ -22,6 +22,10 @@ impl SelectableRect {
         SelectableRect { position: position, size: size, on_click: on_click, time_inside: 0.0 }
     }
 
+    pub fn contains_point(&self, pt: Point) -> bool {
+        self.size.contains(pt - self.position)
+    }
+
     /// Clicked on?
     pub fn update_mouse_release(&mut self, mouse: Point) {
         if self.size.contains(mouse - self.position) {

@@ -67,7 +67,7 @@ use std::f32;
 use std::f64;
 use models::pigeon::*;
 use models::coop::Coop;
-use models::systemhub::SystemHubCollection;
+use models::systemhub::{SystemHubCollection, PigeonAcceptanceLevel};
 use geometry::traits::Collide;
 
 pub struct RenderState {
@@ -197,7 +197,7 @@ impl<'a> Game<'a> {
         self.game_state.irradiance_field.decay(0.998f32);
 
         // Fixed radiation source for the reactor or whatever
-		self.game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(0f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
+		self.game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(-0.5f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
 
         let mut pigeon_to_nuke = None;
         for i in 0..self.game_state.pigeons.len() {
@@ -214,7 +214,11 @@ impl<'a> Game<'a> {
         if let Some(i) = pigeon_to_nuke {
         	let pos = self.game_state.pigeons[i].vector.position;
         	self.game_state.pigeons.swap_remove(i);
-        	self.game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32, RadiationBlendMode::Add);
+
+        	if let PigeonAcceptanceLevel::GetRekd =
+        		self.game_state.system_hubs.please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(pos) {
+		        	self.game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32, RadiationBlendMode::Add);
+        		}
         }
 
         if let Some(coop_idx) = self.game_state.selected_coop {
