@@ -63,13 +63,9 @@ use glutin_window::GlutinWindow as GameWindow;
 
 use std::path::Path;
 use std::io::BufReader;
-use models::pigeon::Pigeon;
+use models::pigeon::*;
 use models::coop::Coop;
 use geometry::traits::Collide;
-
-pub struct PigeonTrajectory {
-	points: Vec<Point>
-}
 
 pub struct RenderState {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -80,7 +76,7 @@ pub struct GameState {
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
     irradiance_field: ScalarField,
-    aim_trajectory: PigeonTrajectory,
+    aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
 }
 
@@ -114,7 +110,7 @@ impl<'a> Game<'a> {
             	pigeons: Vec::new(),
             	coops: Vec::new(),
             	irradiance_field: sf,
-            	aim_trajectory: PigeonTrajectory { points: Vec::new() },
+            	aim_trajectory: Trajectory { points: Vec::new() },
             	selected_coop: None,
             },
             glyph_cache: glyphs,
@@ -140,7 +136,7 @@ impl<'a> Game<'a> {
                             &TextureSettings::new()).unwrap());
     }
 
-    fn simulate_trajectory(&self, origin: Point, cursor: Point) -> PigeonTrajectory {
+    fn simulate_trajectory(&self, origin: Point, cursor: Point) -> Trajectory {
     	let mut pos = origin;
     	let mut vel = cursor - pos;
     	//let mut vel = vel * 0.1f32;
@@ -163,12 +159,16 @@ impl<'a> Game<'a> {
     		}
     	}
 
-    	PigeonTrajectory { points }
+    	Trajectory { points }
     }
 
     fn update(&mut self, args: &UpdateArgs, cursor: Point) {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
+
+        for pigeon in self.game_state.pigeons.iter_mut() {
+            pigeon.update((0.6 * args.dt) as f32);
+        }
 
         if let Some(coop_idx) = self.game_state.selected_coop {
         	self.game_state.aim_trajectory =
@@ -225,7 +225,7 @@ impl<'a> Game<'a> {
     	graphics::math::identity().scale(1.0 / aspect, 1.0)
     }
 
-    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &PigeonTrajectory) {
+    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory) {
     	if trajectory.points.len() < 2 { 
     		return;
     	}
@@ -321,7 +321,8 @@ impl<'a> Game<'a> {
     fn on_mouse_release(&mut self) {
         // Shoot pigeon if mouse button is released
         for mut coop in self.game_state.coops.iter_mut() {
-            if let Some(pigeon) = Coop::update_mouse_release(coop) {
+            if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
+                pigeon.trajectory = Some(self.game_state.aim_trajectory.clone());
                 self.game_state.pigeons.push(pigeon);
             }
         }

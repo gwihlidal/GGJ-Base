@@ -30,8 +30,9 @@ impl Coop {
     pub fn update_mouse_release(&mut self) -> Option<Pigeon> {
         if let Some(emit_dir) = self.direction {
             let mut pigeon = Pigeon::new(Vector::new(self.position, emit_dir));
-            let rad_sum = self.radius() + pigeon.radius();
-            pigeon.advance(rad_sum);
+
+            //let rad_sum = self.radius() + pigeon.radius();
+            //pigeon.advance(rad_sum);
             self.direction = None;
             return Some(pigeon);
         }
