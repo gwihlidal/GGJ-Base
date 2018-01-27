@@ -100,9 +100,7 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 impl<'a> Game<'a> {
     fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
-		//sf.splat(0, 25, 9f32);
-		//sf.splat(20, 15, 9f32);
-		//sf.splat(40, 30, 7f32);
+		sf.splat(pos_to_irradiance_coord(Point::new(0f32, 0f32)), 9f32);
 
         Game {
             render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
@@ -159,6 +157,7 @@ impl<'a> Game<'a> {
     fn update(&mut self, args: &UpdateArgs, cursor: Point) {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
+        self.game_state.irradiance_field.decay(0.995f32);
 
         let mut pigeon_to_nuke = None;
         for i in 0..self.game_state.pigeons.len() {

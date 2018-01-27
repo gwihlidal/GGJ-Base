@@ -43,6 +43,12 @@ impl ScalarField {
 		}
 	}
 
+	pub fn decay(&mut self, amount: f32) {
+		for i in 0..self.values.len() {
+			self.values[i] = self.values[i] * amount;
+		}
+	}
+
 	pub fn to_image_buffer(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
 		let mut res = vec![0u8; (self.width * self.height * 4) as usize];
 		for i in 0..self.width * self.height {
