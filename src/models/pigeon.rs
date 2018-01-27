@@ -20,5 +20,5 @@ impl Pigeon {
 }
 
 impl Collide for Pigeon {
-    fn radius(&self) -> f32 { 3.0 }
+    fn radius(&self) -> f32 { 0.1 }
 }

@@ -5,7 +5,7 @@ use super::Pigeon;
 pub struct Coop {
     /// The coop's midpoint
     pub position: Point,
-    ///  The direction of pidgeon emitting, if interacting
+    ///  The direction of pigeon emitting, if interacting
     pub direction : Option<f32>
 }
 
@@ -23,14 +23,14 @@ impl Coop {
         }
     }
 
-    /// Emit a pidgeon if we release the mouse
+    /// Emit a pigeon if we release the mouse
     pub fn update_mouse_release(&mut self) -> Option<Pigeon> {
         if let Some(emit_dir) = self.direction {
-            let mut pidgeon = Pigeon::new(Vector::new(self.position, emit_dir));
-            let rad_sum = self.radius() + pidgeon.radius();
-            pidgeon.advance(rad_sum);
+            let mut pigeon = Pigeon::new(Vector::new(self.position, emit_dir));
+            let rad_sum = self.radius() + pigeon.radius();
+            pigeon.advance(rad_sum);
             self.direction = None;
-            return Some(pidgeon);
+            return Some(pigeon);
         }
         None
     }

@@ -125,7 +125,7 @@ impl<'a> Game<'a> {
     fn on_load(&mut self, _w: &GameWindow) {
         println!("Adding pigeons!");
         let pos = geometry::Vector {
-            position: geometry::Point::new(400.0, 400.0),
+            position: geometry::Point::new(0.4, 0.0),
             direction: 0.0
         };
         self.game_state.pigeons.push(Pigeon::new(pos));
@@ -172,16 +172,17 @@ impl<'a> Game<'a> {
         use geometry::traits::Position;
 
         const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
-        render_state.gl.draw(args.viewport(), |c, gl| {
-            let square = graphics::rectangle::square(0.0, 0.0, 50.0);
+        render_state.gl.draw(args.viewport(), |_c, gl| {
+            let square = graphics::rectangle::square(0.0, 0.0, 0.1);
             let rotation = game_state.rotation;
 
             //let (x, y) = ((args.width  / 2) as f64,
              //             (args.height / 2) as f64);
 
-            let transform = c.transform.trans(_pigeon.x() as f64, _pigeon.y() as f64)
-                                        .rot_rad(rotation)
-                                        .trans(-25.0, -25.0);
+            let transform = Game::std_transform()
+				.trans(_pigeon.x() as f64, _pigeon.y() as f64)
+				.rot_rad(rotation)
+				.trans(-0.05, -0.05);
             graphics::rectangle(BLUE, square, transform, gl);
         });
     }
