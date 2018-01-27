@@ -1,5 +1,6 @@
 use geometry::{Advance, Collide, Vector};
 use geometry::point::{Point};
+use std::f32;
 
 #[derive(Clone)]
 pub struct Trajectory {
@@ -27,7 +28,7 @@ impl Pigeon {
     }
 
     pub fn calculate_rotation(move_vec: Point) -> f32 {
-        f32::atan2(move_vec.y, move_vec.x)
+        f32::atan2(move_vec.y, move_vec.x) + f32::consts::PI * -0.5f32
     }
 
     /// Update the pigeon's position
