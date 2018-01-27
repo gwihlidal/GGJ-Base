@@ -284,10 +284,6 @@ impl<'a> Game<'a> {
                                                                      c.transform
                                                                          .trans(10.0, 100.0),
                                                                      gl).unwrap();
-
-            //let transform2 = c.transform.trans(100.0, 100.0);
-            //let blah = assets.game_over.unwrap();
-            //image(&blah, transform2, gl);
         });
 
         let pigeons = &game_state.pigeons;
@@ -334,7 +330,7 @@ impl<'a> Game<'a> {
 fn main() {
 
     println!("GGJ-Base");
-    
+
     let mut window: GameWindow = WindowSettings::new(
             "ggj-base",
             [1920, 1080]
@@ -345,10 +341,6 @@ fn main() {
         .unwrap();
 
 	let mut cursor = Point::new(0f32, 0f32);
-
-    //let assets = find_folder::Search::ParentsThenKids(3, 3)
-    //    .for_folder("assets").unwrap();
-
     let glyph_cache = GlyphCache::new("assets/FiraSans-Regular.ttf", (), TextureSettings::new()).unwrap();
     let mut game = Game::new(glyph_cache);
     game.on_load(&window);
@@ -407,12 +399,12 @@ fn play_sound(sound_file: &str) {
     #[allow(deprecated)]
     let endpoint = rodio::get_default_endpoint().unwrap();
     let sink = rodio::Sink::new(&endpoint);
-     
+
     let file = std::fs::File::open(sound_file).unwrap();
     let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
 
     sink.append(source);
-    sink.detach();  
+    sink.detach();
 }
 
 fn pigeon_sound()
