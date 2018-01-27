@@ -94,9 +94,15 @@ pub struct Game<'a> {
     assets: Assets,
 }
 
+fn pos_to_irradiance_coord(p: Point) -> Point {
+	let aspect = 16.0 / 9.0;
+	(p + Point::new(aspect, 1.0)) / Point::new(aspect * 2.0, 2.0)
+}
+
 impl<'a> Game<'a> {
     fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
+		sf.splat(0, 25, 9f32);
 		sf.splat(20, 15, 9f32);
 		sf.splat(40, 30, 7f32);
 
@@ -133,7 +139,7 @@ impl<'a> Game<'a> {
     }
 
     fn simulate_trajectory(&mut self, mouse_x: f64, mouse_y: f64) {
-    	let mut pos = Point::new(0.5f32, 0.0f32);
+    	let mut pos = Point::new(0.0f32, -1.0f32);
     	//let mut vel = Point::new(0.0f32, 1.0f32);
 
     	// HACK: todo: un-hardcode the screen resolution
@@ -144,11 +150,11 @@ impl<'a> Game<'a> {
     	points.clear();
 
     	let iter_count = 70;
-    	let delta_t = 0.03f32;
+    	let delta_t = 0.07f32;
 
     	for _ in 0..iter_count {
     		points.push(pos);
-    		let grad = self.game_state.irradiance_field.sample_gradient(pos.x, pos.y);
+    		let grad = self.game_state.irradiance_field.sample_gradient(pos_to_irradiance_coord(pos));
     		vel = vel * 0.98 + grad * 0.23;
 
     		pos = pos + vel * delta_t;
@@ -203,7 +209,8 @@ impl<'a> Game<'a> {
     }
 
     fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &PigeonTrajectory) {
-    	let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
+    	let aspect = 16.0 / 9.0;
+    	let scale_uniform = graphics::math::identity().scale(1.0 / aspect, 1.0);
     	if trajectory.points.len() < 2 { 
     		return;
     	}
@@ -216,7 +223,7 @@ impl<'a> Game<'a> {
 	    		trajectory.points[i-1].y as f64,
 	    		trajectory.points[i].x as f64,
 	    		trajectory.points[i].y as f64,
-	    	], &Default::default(), scale_0_to_1, gl);
+	    	], &Default::default(), scale_uniform, gl);
 	    }
     }
 

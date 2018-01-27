@@ -46,12 +46,15 @@ impl ScalarField {
 		for i in 0..self.width * self.height {
 			res[i * 4 + 0] = (smoothstep(0.0, 1.0, self.values[i]) * 0.8f32 * 255f32) as u8;
 			res[i * 4 + 1] = (smoothstep(0.0, 0.5, self.values[i]) * 0.8f32 * 255f32) as u8;
+			res[i * 4 + 2] = 32u8;
 			res[i * 4 + 3] = 255u8;
 		}
 		ImageBuffer::from_raw(self.width as u32, self.height as u32, res).unwrap()
 	}
 
-	pub fn sample_gradient(&self, x: f32, y: f32) -> Point {
+	pub fn sample_gradient(&self, p: Point) -> Point {
+		let Point { x, y } = p;
+
         let x0 = x * self.width as f32;
         let y0 = y * self.height as f32;
 
