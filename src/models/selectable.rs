@@ -6,7 +6,7 @@ use piston::input::RenderArgs;
 
 #[derive(Clone)]
 pub struct SelectableRect {
-    /// The rect's corner position
+    /// The rect's lower left corner position
     pub position: Point,
     /// The rectangle size
     pub size: Size,
@@ -53,8 +53,11 @@ impl SelectableRect {
         render_state.gl.draw(args.viewport(), |_c, gl| {
             let rect = [0.0, 0.0, self.size.width as f64, self.size.height as f64];
 
+            //let scale_f = self.scale_factor();
             let transform = Game::std_transform()
-                .trans(self.position.x as f64, self.position.y as f64);
+                .trans(self.position.x as f64, self.position.y as f64)
+                .scale(1.0, 1.0);
+                //.scale(scale_f as f64, scale_f as f64);
             graphics::rectangle(color, rect, transform, gl);
         });
     }

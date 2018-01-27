@@ -31,6 +31,7 @@ use scalar_field::*;
 #[macro_use]
 pub mod geometry;
 use geometry::point::{Point};
+use geometry::size::Size;
 
 #[macro_use]
 pub mod models;
@@ -67,6 +68,7 @@ use std::f32;
 use std::f64;
 use models::pigeon::*;
 use models::coop::Coop;
+use models::speechbubble::SpeechBubble;
 use models::systemhub::{SystemHubCollection, PigeonAcceptanceLevel};
 use geometry::traits::Collide;
 
@@ -78,6 +80,7 @@ pub struct GameState {
     rotation: f64,   // Rotation for the square
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
+    bubbles: Vec<SpeechBubble>,
     system_hubs: SystemHubCollection,
     irradiance_field: ScalarField,
     aim_trajectory: Trajectory,
@@ -115,6 +118,7 @@ impl<'a> Game<'a> {
             	rotation: 0.0,
             	pigeons: Vec::new(),
             	coops: Vec::new(),
+                bubbles: Vec::new(),
                 system_hubs: SystemHubCollection::new(),
             	irradiance_field: sf,
             	aim_trajectory: Trajectory { points: Vec::new() },
@@ -139,6 +143,9 @@ impl<'a> Game<'a> {
         let pos_coop = geometry::Point::new(0.0, -0.9);
         self.game_state.coops.push(Coop::new(pos_coop));
         self.game_state.system_hubs.init();
+
+        let pos_bubble = geometry::Point::new(0.2, 0.5);
+        self.game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.1,0.2), pigeon_sound,pos_bubble));
 
         // Pigeon animation frame #0
         self.assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
@@ -344,22 +351,12 @@ impl<'a> Game<'a> {
             	Game::render_trajectory(gl, &game_state.aim_trajectory, col);
             }
 
-            /*let rotation = game_state.rotation;
-            let mouse_transform = Game::std_transform()
-            	.trans(cursor.x as f64, cursor.y as f64)
-				.rot_rad(rotation)//.trans(-25.0, -25.0)
-				;
-
-            // Draw a box rotating around the middle of the screen.
-            const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-            rectangle(RED, mouse_square, mouse_transform, gl);*/
-
             text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
                                                                      glyph_cache,
                                                                      &DrawState::default(),
                                                                      c.transform
                                                                          .trans(10.0, 100.0),
-                                                                     gl).unwrap();
+                                                                     gl).unwrap();            
         });
 
         let pigeons = &game_state.pigeons;
@@ -373,6 +370,28 @@ impl<'a> Game<'a> {
         }
 
         game_state.system_hubs.render_systems(render_state, args);
+        for bubble in game_state.bubbles.iter() {
+                bubble.render_bubble(render_state, args);
+        }
+
+        render_state.gl.draw(args.viewport(), |c, gl| {
+            for bubble in game_state.bubbles.iter() {
+                let s = bubble.get_text();
+                let ss: &str = &s;
+                let position: &Point = bubble.get_point();
+                text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw(ss,
+                                                             glyph_cache,
+                                                             &DrawState::default(),
+                                                             //c.transform
+                                                              //           .trans(10.0, 500.0),
+                                                             Game::std_transform()
+                                                                 .flip_v()
+                                                                 .trans(position.x as f64, -position.y as f64)
+                                                                 .scale(0.001  as f64,0.001 as f64),//.rot_rad(0.0)
+                                                                 //.trans(-0.05, -0.05),
+                                                             gl).unwrap();
+            }
+        });        
         // Full Screen UI
         if game_state.game_over {
             render_state.gl.draw(args.viewport(), |_c, gl| {
@@ -393,6 +412,10 @@ impl<'a> Game<'a> {
 
         let mut coop = &mut self.game_state.coops[0];
         Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+
+        for bubble in self.game_state.bubbles.iter_mut() {
+            SpeechBubble::update_mouse_move(bubble, 1.0, Point::new(mouse[0] as f32, mouse[1] as f32));
+        }
     }
 
     fn on_mouse_click(&mut self, mouse: [f64;2]) {
@@ -415,7 +438,7 @@ impl<'a> Game<'a> {
         Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
     }
 
-    fn on_mouse_release(&mut self) {
+    fn on_mouse_release(&mut self, mouse: [f64;2]) {
         // Shoot pigeon if mouse button is released
         /*for mut coop in self.game_state.coops.iter_mut() {
             if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
@@ -428,6 +451,10 @@ impl<'a> Game<'a> {
         if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
             pigeon.trajectory = Some(self.game_state.aim_trajectory.clone());
             self.game_state.pigeons.push(pigeon);
+        }
+
+        for mut bubble in self.game_state.bubbles.iter_mut() {
+            SpeechBubble::update_mouse_release(bubble, Point::new(mouse[0] as f32, mouse[1] as f32));
         }
 
         self.game_state.selected_coop = None;
@@ -471,16 +498,16 @@ fn main() {
         if let Some(Button::Mouse(button)) = e.press_args(){
             game.on_mouse_click([cursor.x as f64, cursor.y as f64]);
 
-            if button == MouseButton::Left {
+            /*if button == MouseButton::Left {
                 play_sound("assets/dummy.wav");
             }
             else if button == MouseButton::Right {
                 play_sound("assets/footstep.wav");
-            }
+            }*/
         }
 
         if let Some(Button::Mouse(_)) = e.release_args() {
-            game.on_mouse_release();
+            game.on_mouse_release([cursor.x as f64, cursor.y as f64]);
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
