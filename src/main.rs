@@ -332,7 +332,7 @@ fn main() {
     println!("GGJ-Base");
 
     let mut window: GameWindow = WindowSettings::new(
-            "ggj-base",
+            "Irradiant Descent",
             [1920, 1080]
         )
         .opengl(OpenGL::V3_2)
