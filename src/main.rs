@@ -136,7 +136,7 @@ impl<'a> Game<'a> {
     }
 
     fn on_load(&mut self, _w: &GameWindow) {
-        let pos_coop = geometry::Point::new(0.0, -0.7);
+        let pos_coop = geometry::Point::new(0.0, -0.9);
         self.game_state.coops.push(Coop::new(pos_coop));
         self.game_state.system_hubs.init();
 
@@ -165,7 +165,7 @@ impl<'a> Game<'a> {
 
     fn simulate_trajectory(&self, origin: Point, cursor: Point) -> Trajectory {
     	let mut pos = origin;
-    	let mut vel = cursor - pos;
+    	let mut vel = (cursor - pos) * 0.5f32;
     	//let mut vel = vel * 0.1f32;
 
     	let mut points = Vec::new();
@@ -176,7 +176,7 @@ impl<'a> Game<'a> {
     	for _ in 0..iter_count {
     		points.push(pos);
     		let grad = self.game_state.irradiance_field.sample_gradient(pos_to_irradiance_coord(pos));
-    		vel = vel * 0.98 + grad * 0.23;
+    		vel = vel * 0.98 + grad * 0.13;
 
     		pos = pos + vel * delta_t;
 
@@ -205,6 +205,10 @@ impl<'a> Game<'a> {
             if let PigeonStatus::ReachedDestination = pigeon.update((1.0 * args.dt) as f32) {
             	pigeon_to_nuke = Some(i);
             }
+        }
+
+        for coop in self.game_state.coops.iter_mut() {
+        	coop.update(args.dt as f32);
         }
 
         if let Some(i) = pigeon_to_nuke {
@@ -288,7 +292,7 @@ impl<'a> Game<'a> {
     	graphics::math::identity().scale(1.0 / aspect, 1.0)
     }
 
-    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory) {
+    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory, col: [f32; 4]) {
     	if trajectory.points.len() < 2 {
     		return;
     	}
@@ -296,7 +300,7 @@ impl<'a> Game<'a> {
     	use graphics::*;
 
     	for i in 1..trajectory.points.len() {
-	    	Line::new([1.0f32, 0.1f32, 0.02f32, 1.0f32], 0.005).draw([
+	    	Line::new(col, 0.005).draw([
 	    		trajectory.points[i-1].x as f64,
 	    		trajectory.points[i-1].y as f64,
 	    		trajectory.points[i].x as f64,
@@ -327,8 +331,13 @@ impl<'a> Game<'a> {
             // Test line rendering
             // Line::new([1.0, 1.0, 1.0, 1.0], 0.001).draw([0f64, 0f64, 1f64, 1f64], &Default::default(), scale_0_to_1, gl);
 
-            if let Some(_) = game_state.selected_coop {
-            	Game::render_trajectory(gl, &game_state.aim_trajectory);
+            if let Some(coop) = game_state.selected_coop {
+            	let col = if game_state.coops[coop].can_fire() {
+            		[0.1, 1.0, 0.3, 1.0]
+            	} else {
+            		[1.0, 0.0, 0.0, 1.0]
+            	};
+            	Game::render_trajectory(gl, &game_state.aim_trajectory, col);
             }
 
             /*let rotation = game_state.rotation;
