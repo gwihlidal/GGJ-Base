@@ -61,6 +61,7 @@ use glfw_window::GlfwWindow as GameWindow;
 #[cfg(feature = "include_glutin")]
 use glutin_window::GlutinWindow as GameWindow;
 
+use std::path::Path;
 use std::io::BufReader;
 use models::pigeon::Pigeon;
 use models::coop::Coop;
@@ -82,10 +83,15 @@ pub struct GameState {
     aim_trajectory: PigeonTrajectory,
 }
 
+pub struct Assets {
+    game_over: Option<Texture>
+}
+
 pub struct Game<'a> {
     render_state: RenderState,
     game_state: GameState,
-    glyph_cache: GlyphCache<'a>
+    glyph_cache: GlyphCache<'a>,
+    assets: Assets,
 }
 
 impl<'a> Game<'a> {
@@ -103,7 +109,10 @@ impl<'a> Game<'a> {
             	irradiance_field: sf,
             	aim_trajectory: PigeonTrajectory { points: Vec::new() },
             },
-            glyph_cache: glyphs
+            glyph_cache: glyphs,
+            assets: Assets {
+                game_over: None
+            }
         }
     }
 
@@ -117,6 +126,10 @@ impl<'a> Game<'a> {
 
         let pos_coop = geometry::Point::new(200.0, 200.0);
         self.game_state.coops.push(Coop::new(pos_coop));
+
+        self.assets.game_over = Some(Texture::from_path(
+                            &Path::new("./assets/GameOver.png"),
+                            &TextureSettings::new()).unwrap());
     }
 
     fn simulate_trajectory(&mut self, mouse_x: f64, mouse_y: f64) {
@@ -207,7 +220,7 @@ impl<'a> Game<'a> {
 	    }
     }
 
-    fn render(render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
+    fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
 
         use graphics::*;
         let mouse_square = rectangle::square(0.0, 0.0, 50.0);
@@ -248,6 +261,10 @@ impl<'a> Game<'a> {
                                                                      c.transform
                                                                          .trans(10.0, 100.0),
                                                                      gl).unwrap();
+
+            //let transform2 = c.transform.trans(100.0, 100.0);
+            //let blah = assets.game_over.unwrap();
+            //image(&blah, transform2, gl);
         });
 
         let pigeons = &game_state.pigeons;
@@ -289,8 +306,6 @@ fn main() {
 
     println!("GGJ-Base");
     
-    //let opengl = OpenGL::V3_2;
-
     let mut window: GameWindow = WindowSettings::new(
             "ggj-base",
             [1920, 1080]
@@ -314,7 +329,7 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            Game::render(&mut game.render_state, &game.game_state, &mut game.glyph_cache, &r, cursor[0], cursor[1]);
+            Game::render(&game.assets, &mut game.render_state, &game.game_state, &mut game.glyph_cache, &r, cursor[0], cursor[1]);
         }
 
         if let Some(u) = e.update_args() {
