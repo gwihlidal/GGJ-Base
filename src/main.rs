@@ -128,7 +128,7 @@ impl<'a> Game<'a> {
         self.game_state.coops.push(Coop::new(pos_coop));
 
         self.assets.game_over = Some(Texture::from_path(
-                            &Path::new("./assets/GameOver.png"),
+                            &Path::new("./assets/GameOver1.png"),
                             &TextureSettings::new()).unwrap());
     }
 
