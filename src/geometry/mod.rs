@@ -1,7 +1,7 @@
 pub mod point;
 pub mod size;
 pub mod traits;
-#[macro_use] mod vector;
+#[macro_use] pub mod vector;
 
 pub use self::vector::Vector;
 pub use self::point::Point;

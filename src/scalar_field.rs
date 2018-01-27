@@ -1,4 +1,5 @@
 use image::*;
+use geometry::point::{Point};
 
 pub struct ScalarField {
 	pub values: Vec<f32>,
@@ -48,5 +49,17 @@ impl ScalarField {
 			res[i * 4 + 3] = 255u8;
 		}
 		ImageBuffer::from_raw(self.width as u32, self.height as u32, res).unwrap()
+	}
+
+	pub fn sample_gradient(&self, x: f32, y: f32) -> Point {
+        let x0 = (x * self.width) as usize;
+        let y0 = (y * self.height) as usize;
+
+        let h00 = self.values[y0 * self.width + x0];
+        let h01 = self.values[y0 * self.width + x0 + 1];
+        let h10 = self.values[y0 * self.width + x0 + self.width];
+        let h11 = self.values[y0 * self.width + x0 + self.width + 1];
+
+		Point::new(h00 - h01, h00 - h10)
 	}
 }
