@@ -22,6 +22,11 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 	return x * x * (3f32 - 2f32 * x)
 }
 
+pub enum RadiationBlendMode {
+	Add,
+	Max,
+}
+
 impl ScalarField {
 	pub fn new(w: usize, h: usize) -> ScalarField {
 		ScalarField {
@@ -31,15 +36,29 @@ impl ScalarField {
 		}
 	}
 
-	pub fn splat(&mut self, pos: Point, radius: f32) {
+	pub fn splat(&mut self, pos: Point, radius: f32, blend_mode: RadiationBlendMode) {
 		let pos = pos * Point::new(self.width as f32, self.height as f32);
 
-		for y in 0..self.height {
-			for x in 0..self.width {
-				let xd = x as f32 - pos.x;
-				let yd = y as f32 - pos.y;
-				//self.values[y * self.width + x] += smoothstep(radius, 0.0f32, (xd * xd + yd * yd).sqrt());
-				self.values[y * self.width + x] += (-(xd * xd + yd * yd) / (radius * radius)).exp();
+		match blend_mode {
+			RadiationBlendMode::Add => {
+				for y in 0..self.height {
+					for x in 0..self.width {
+						let xd = x as f32 - pos.x;
+						let yd = y as f32 - pos.y;
+						self.values[y * self.width + x] += (-(xd * xd + yd * yd) / (radius * radius)).exp();
+					}
+				}
+			}
+			RadiationBlendMode::Max => {
+				for y in 0..self.height {
+					for x in 0..self.width {
+						let xd = x as f32 - pos.x;
+						let yd = y as f32 - pos.y;
+						self.values[y * self.width + x] = self.values[y * self.width + x].max(
+							(-(xd * xd + yd * yd) / (radius * radius)).exp()
+						);
+					}
+				}
 			}
 		}
 	}
