@@ -13,6 +13,11 @@ pub struct Pigeon {
     trajectory_pos: usize,
 }
 
+pub enum PigeonStatus {
+    JustPigeoning,
+    ReachedDestination,
+}
+
 derive_position_direction!(Pigeon);
 
 impl Pigeon {
@@ -22,7 +27,7 @@ impl Pigeon {
     }
 
     /// Update the pigeon's position
-    pub fn update(&mut self, units: f32) {
+    pub fn update(&mut self, units: f32) -> PigeonStatus {
         if let Some(ref traj) = self.trajectory {
             let mut target = self.vector.position;
 
@@ -43,6 +48,14 @@ impl Pigeon {
             }
 
             self.vector.position = self.vector.position + target;
+
+            if dist < 1e-3 {
+                PigeonStatus::ReachedDestination
+            } else {
+                PigeonStatus::JustPigeoning
+            }
+        } else {
+            PigeonStatus::JustPigeoning
         }
     }
 }

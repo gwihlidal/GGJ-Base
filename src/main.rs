@@ -131,12 +131,9 @@ impl<'a> Game<'a> {
             position: geometry::Point::new(0.4, 0.0),
             direction: 0.0
         };
-        self.game_state.pigeons.push(Pigeon::new(pos));
 
         let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
-
-
     }
 
     fn simulate_trajectory(&self, origin: Point, cursor: Point) -> Trajectory {
