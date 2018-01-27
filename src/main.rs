@@ -367,28 +367,47 @@ impl<'a> Game<'a> {
 
     fn on_mouse_move(&mut self, mouse: [f64;2]) {
         // Update coop pigeon shooting directions
-        for mut coop in self.game_state.coops.iter_mut() {
-            Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
-        }
+//        for mut coop in self.game_state.coops.iter_mut() {
+//            Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+//        }
+
+        let mut coop = &mut self.game_state.coops[0];
+        Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
     }
 
     fn on_mouse_click(&mut self, mouse: [f64;2]) {
         // Select coop if clicking inside
-        for coop_idx in 0..self.game_state.coops.len() {
-        	let mut coop = &mut self.game_state.coops[coop_idx];
-            if Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32)) {
-            	self.game_state.selected_coop = Some(coop_idx);
-            }
+//        for coop_idx in 0..self.game_state.coops.len() {
+//        	let mut coop = &mut self.game_state.coops[coop_idx];
+//            if Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32)) {
+//            	self.game_state.selected_coop = Some(coop_idx);
+//            }
+//        }
+
+		let coop_idx = 0;
+    	let mut coop = &mut self.game_state.coops[coop_idx];
+    	let fake_click = coop.position;
+        if Coop::update_mouse_click(coop, fake_click) {
+        	self.game_state.selected_coop = Some(coop_idx);
         }
+
+        // lololo
+        Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
     }
 
     fn on_mouse_release(&mut self) {
         // Shoot pigeon if mouse button is released
-        for mut coop in self.game_state.coops.iter_mut() {
+        /*for mut coop in self.game_state.coops.iter_mut() {
             if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
                 pigeon.trajectory = Some(self.game_state.aim_trajectory.clone());
                 self.game_state.pigeons.push(pigeon);
             }
+        }*/
+
+        let coop = &mut self.game_state.coops[0];
+        if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
+            pigeon.trajectory = Some(self.game_state.aim_trajectory.clone());
+            self.game_state.pigeons.push(pigeon);
         }
 
         self.game_state.selected_coop = None;
