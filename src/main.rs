@@ -145,7 +145,7 @@ impl<'a> Game<'a> {
         self.game_state.system_hubs.init();
 
         let pos_bubble = geometry::Point::new(0.2, 0.5);
-        self.game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.1,0.2), pigeon_sound,pos_bubble));
+        self.game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.4,0.1), pigeon_sound,pos_bubble));
 
         // Pigeon animation frame #0
         self.assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
@@ -374,23 +374,24 @@ impl<'a> Game<'a> {
                 bubble.render_bubble(render_state, args);
         }
 
+        //Speech Bubble Text
         render_state.gl.draw(args.viewport(), |c, gl| {
             for bubble in game_state.bubbles.iter() {
                 let s = bubble.get_text();
                 let ss: &str = &s;
                 let position: &Point = bubble.get_point();
+                let h_offset: f32 = bubble.get_height()/2.0;
+
                 text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw(ss,
                                                              glyph_cache,
                                                              &DrawState::default(),
-                                                             //c.transform
-                                                              //           .trans(10.0, 500.0),
                                                              Game::std_transform()
                                                                  .flip_v()
-                                                                 .trans(position.x as f64, -position.y as f64)
-                                                                 .scale(0.001  as f64,0.001 as f64),//.rot_rad(0.0)
-                                                                 //.trans(-0.05, -0.05),
+                                                                 .trans(position.x as f64, -position.y as f64 - h_offset as f64 + 0.01 as f64)
+                                                                 .scale(0.001  as f64,0.001 as f64),
                                                              gl).unwrap();
             }
+
         });        
         // Full Screen UI
         if game_state.game_over {
@@ -497,13 +498,6 @@ fn main() {
         // Update coop pigeon emission
         if let Some(Button::Mouse(button)) = e.press_args(){
             game.on_mouse_click([cursor.x as f64, cursor.y as f64]);
-
-            /*if button == MouseButton::Left {
-                play_sound("assets/dummy.wav");
-            }
-            else if button == MouseButton::Right {
-                play_sound("assets/footstep.wav");
-            }*/
         }
 
         if let Some(Button::Mouse(_)) = e.release_args() {

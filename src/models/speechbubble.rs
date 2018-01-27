@@ -43,4 +43,7 @@ impl SpeechBubble {
     pub fn get_point(&self) -> &Point{
         return &self.rect.position;
     }
+    pub fn get_height(&self) -> &f32{
+        return &self.rect.size.height;
+    }
 }
