@@ -63,8 +63,11 @@ use glutin_window::GlutinWindow as GameWindow;
 
 use std::path::Path;
 use std::io::BufReader;
+use std::f32;
+use std::f64;
 use models::pigeon::*;
 use models::coop::Coop;
+use models::systemhub::{SystemHubCollection, PigeonAcceptanceLevel};
 use geometry::traits::Collide;
 
 pub struct RenderState {
@@ -75,14 +78,19 @@ pub struct GameState {
     rotation: f64,   // Rotation for the square
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
+    system_hubs: SystemHubCollection,
     irradiance_field: ScalarField,
     aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
     game_over: bool,
+    pigeon_f0: bool,
+    pigeon_timer: f64,
 }
 
 pub struct Assets {
-    game_over: Texture
+    game_over: Texture,
+    pigeon_points_f0: Vec<(geometry::Point, geometry::Point)>,
+    pigeon_points_f1: Vec<(geometry::Point, geometry::Point)>,
 }
 
 pub struct Game<'a> {
@@ -100,9 +108,6 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 impl<'a> Game<'a> {
     fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
-		//sf.splat(0, 25, 9f32);
-		//sf.splat(20, 15, 9f32);
-		//sf.splat(40, 30, 7f32);
 
         Game {
             render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
@@ -110,29 +115,57 @@ impl<'a> Game<'a> {
             	rotation: 0.0,
             	pigeons: Vec::new(),
             	coops: Vec::new(),
+                system_hubs: SystemHubCollection::new(),
             	irradiance_field: sf,
             	aim_trajectory: Trajectory { points: Vec::new() },
             	game_over: false,
+                pigeon_f0: true,
             	selected_coop: None,
+                pigeon_timer: 0.0,
             },
             glyph_cache: glyphs,
             assets: Assets {
                 game_over: Texture::from_path(
                     &Path::new("./assets/GameOver.png"),
                     &TextureSettings::new()
-                ).unwrap()
+                ).unwrap(),
+                pigeon_points_f0: Vec::new(),
+                pigeon_points_f1: Vec::new(),
             }
         }
     }
 
     fn on_load(&mut self, _w: &GameWindow) {
-        let pos_coop = geometry::Point::new(0.0, -0.7);
+        let pos_coop = geometry::Point::new(0.0, -0.9);
         self.game_state.coops.push(Coop::new(pos_coop));
+        self.game_state.system_hubs.init();
+
+        // Pigeon animation frame #0
+        self.assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
+        self.assets.pigeon_points_f0.push((Point::new(100.0, 442.043),   Point::new(250.443, 57.113)));
+        self.assets.pigeon_points_f0.push((Point::new(250.443, 57.113),  Point::new(400.0, 442.043)));
+        self.assets.pigeon_points_f0.push((Point::new(309.156, 205.907), Point::new(445.678, 147.404)));
+        self.assets.pigeon_points_f0.push((Point::new(445.678, 147.404), Point::new(375.655, 376.547)));
+        self.assets.pigeon_points_f0.push((Point::new(375.655, 376.547), Point::new(309.156, 205.907)));
+        self.assets.pigeon_points_f0.push((Point::new(191.678, 205.907), Point::new(55.156, 147.404)));
+        self.assets.pigeon_points_f0.push((Point::new(55.156, 147.404),  Point::new(125.179, 376.547)));
+        self.assets.pigeon_points_f0.push((Point::new(125.179, 376.547), Point::new(191.678, 205.907)));
+
+        // Pigeon animation frame #1
+        self.assets.pigeon_points_f1.push((Point::new(400.0, 442.043), Point::new(100.0, 442.043)));
+        self.assets.pigeon_points_f1.push((Point::new(100.0, 442.043), Point::new(250.443, 57.113)));
+        self.assets.pigeon_points_f1.push((Point::new(250.443, 57.113), Point::new(400.0, 442.043)));
+        self.assets.pigeon_points_f1.push((Point::new(308.156, 205.907), Point::new(449.411, 311.876)));
+        self.assets.pigeon_points_f1.push((Point::new(449.411, 311.876), Point::new(374.655, 376.547)));
+        self.assets.pigeon_points_f1.push((Point::new(374.655, 376.547), Point::new(308.156, 205.907)));
+        self.assets.pigeon_points_f1.push((Point::new(192.411, 205.907), Point::new(51.156, 311.876)));
+        self.assets.pigeon_points_f1.push((Point::new(51.156, 311.876), Point::new(125.912, 376.547)));
+        self.assets.pigeon_points_f1.push((Point::new(125.912, 376.547), Point::new(192.411, 205.907)));
     }
 
     fn simulate_trajectory(&self, origin: Point, cursor: Point) -> Trajectory {
     	let mut pos = origin;
-    	let mut vel = cursor - pos;
+    	let mut vel = (cursor - pos) * 0.5f32;
     	//let mut vel = vel * 0.1f32;
 
     	let mut points = Vec::new();
@@ -143,7 +176,7 @@ impl<'a> Game<'a> {
     	for _ in 0..iter_count {
     		points.push(pos);
     		let grad = self.game_state.irradiance_field.sample_gradient(pos_to_irradiance_coord(pos));
-    		vel = vel * 0.98 + grad * 0.23;
+    		vel = vel * 0.98 + grad * 0.13;
 
     		pos = pos + vel * delta_t;
 
@@ -160,43 +193,77 @@ impl<'a> Game<'a> {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
 
+        // Radioactive decay
+        self.game_state.irradiance_field.decay(0.998f32);
+
+        // Fixed radiation source for the reactor or whatever
+		self.game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(-0.5f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
+
         let mut pigeon_to_nuke = None;
         for i in 0..self.game_state.pigeons.len() {
         	let mut pigeon = &mut self.game_state.pigeons[i];
-            if let PigeonStatus::ReachedDestination = pigeon.update((0.6 * args.dt) as f32) {
+            if let PigeonStatus::ReachedDestination = pigeon.update((1.0 * args.dt) as f32) {
             	pigeon_to_nuke = Some(i);
             }
+        }
+
+        for coop in self.game_state.coops.iter_mut() {
+        	coop.update(args.dt as f32);
         }
 
         if let Some(i) = pigeon_to_nuke {
         	let pos = self.game_state.pigeons[i].vector.position;
         	self.game_state.pigeons.swap_remove(i);
-        	self.game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32);
+
+        	if let PigeonAcceptanceLevel::GetRekd =
+        		self.game_state.system_hubs.please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(pos) {
+		        	self.game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32, RadiationBlendMode::Add);
+        		}
         }
 
         if let Some(coop_idx) = self.game_state.selected_coop {
         	self.game_state.aim_trajectory =
         		self.simulate_trajectory(self.game_state.coops[coop_idx].position, cursor);
         }
+
+        self.game_state.pigeon_timer += args.dt;
+
+        self.game_state.system_hubs.update_systems(args);
     }
 
-    fn render_pigeon(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
+    fn render_pigeon(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
         use graphics::*;
         use geometry::traits::Position;
 
         const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
         render_state.gl.draw(args.viewport(), |_c, gl| {
             let square = graphics::rectangle::square(0.0, 0.0, 0.1);
-            let rotation = game_state.rotation;
+            let rotation = pigeon.vector.direction as f64;
 
             //let (x, y) = ((args.width  / 2) as f64,
              //             (args.height / 2) as f64);
 
+
+
             let transform = Game::std_transform()
-				.trans(_pigeon.x() as f64, _pigeon.y() as f64)
-				.rot_rad(rotation)
-				.trans(-0.05, -0.05);
-            graphics::rectangle(BLUE, square, transform, gl);
+				.trans(pigeon.x() as f64, pigeon.y() as f64)
+				.rot_rad(rotation);
+
+            let remapped = (game_state.pigeon_timer * 40.0).sin() * 0.5 + 0.5; // -1...1 -> 0...1
+
+            let scale = 0.00023;
+            for i in 0..assets.pigeon_points_f0.len() {
+                let (s_o, e_o) = assets.pigeon_points_f0[i];
+                let (s_p, e_p) = assets.pigeon_points_f1[i];
+                let animated_s = s_o.lerp(&s_p, remapped as f32);
+                let animated_e = e_o.lerp(&e_p, remapped as f32);
+                graphics::Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.002).draw([
+                    (animated_s.x - 256.0) as f64 * scale,
+                    (animated_s.y - 256.0) as f64 * -scale,
+                    (animated_e.x - 256.0) as f64 * scale,
+                    (animated_e.y - 256.0) as f64 * -scale,
+                ], &Default::default(), transform, gl);
+            }
         });
     }
 
@@ -204,7 +271,7 @@ impl<'a> Game<'a> {
         use graphics::*;
         use geometry::traits::Position;
 
-        const ORANGE:  [f32; 4] = [1.0, 0.5647, 0.0039, 1.0];
+        const color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         use graphics::math::Vec2d;
 
         render_state.gl.draw(args.viewport(), |_c, gl| {
@@ -219,7 +286,7 @@ impl<'a> Game<'a> {
                 transform = transform.rot_rad(dir as f64);
             }
 
-            graphics::polygon(ORANGE, &pentagon, transform, gl);
+            graphics::polygon(color, &pentagon, transform, gl);
         });
     }
 
@@ -229,7 +296,7 @@ impl<'a> Game<'a> {
     	graphics::math::identity().scale(1.0 / aspect, 1.0)
     }
 
-    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory) {
+    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &Trajectory, col: [f32; 4]) {
     	if trajectory.points.len() < 2 {
     		return;
     	}
@@ -237,7 +304,7 @@ impl<'a> Game<'a> {
     	use graphics::*;
 
     	for i in 1..trajectory.points.len() {
-	    	Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.001).draw([
+	    	Line::new(col, 0.005).draw([
 	    		trajectory.points[i-1].x as f64,
 	    		trajectory.points[i-1].y as f64,
 	    		trajectory.points[i].x as f64,
@@ -246,7 +313,7 @@ impl<'a> Game<'a> {
 	    }
     }
 
-    fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, _cursor: Point) {
+    fn render(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, _cursor: Point) {
         use graphics::*;
         let _mouse_square = rectangle::square(0.0, 0.0, 0.1);
         let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
@@ -268,8 +335,13 @@ impl<'a> Game<'a> {
             // Test line rendering
             // Line::new([1.0, 1.0, 1.0, 1.0], 0.001).draw([0f64, 0f64, 1f64, 1f64], &Default::default(), scale_0_to_1, gl);
 
-            if let Some(_) = game_state.selected_coop {
-            	Game::render_trajectory(gl, &game_state.aim_trajectory);
+            if let Some(coop) = game_state.selected_coop {
+            	let col = if game_state.coops[coop].can_fire() {
+            		[0.1, 1.0, 0.3, 1.0]
+            	} else {
+            		[1.0, 0.0, 0.0, 1.0]
+            	};
+            	Game::render_trajectory(gl, &game_state.aim_trajectory, col);
             }
 
             /*let rotation = game_state.rotation;
@@ -292,7 +364,7 @@ impl<'a> Game<'a> {
 
         let pigeons = &game_state.pigeons;
         for pigeon in pigeons.iter() {
-            Game::render_pigeon(render_state, game_state, args, pigeon);
+            Game::render_pigeon(assets, render_state, game_state, args, pigeon);
         }
 
         let coops = &game_state.coops;
@@ -300,42 +372,62 @@ impl<'a> Game<'a> {
             Game::render_coop(render_state, args, coop);
         }
 
+        game_state.system_hubs.render_systems(render_state, args);
         // Full Screen UI
         if game_state.game_over {
             render_state.gl.draw(args.viewport(), |_c, gl| {
                 let gui_transform = scale_0_to_1
                 	.flip_v()
                 	.trans(0.0, -1.0)
-                	.scale(1.0 / _assets.game_over.get_width() as f64, 1.0 / _assets.game_over.get_height() as f64);
-                image(&_assets.game_over, gui_transform, gl);
+                	.scale(1.0 / assets.game_over.get_width() as f64, 1.0 / assets.game_over.get_height() as f64);
+                image(&assets.game_over, gui_transform, gl);
             });
         }
     }
 
     fn on_mouse_move(&mut self, mouse: [f64;2]) {
         // Update coop pigeon shooting directions
-        for mut coop in self.game_state.coops.iter_mut() {
-            Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
-        }
+//        for mut coop in self.game_state.coops.iter_mut() {
+//            Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+//        }
+
+        let mut coop = &mut self.game_state.coops[0];
+        Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
     }
 
     fn on_mouse_click(&mut self, mouse: [f64;2]) {
         // Select coop if clicking inside
-        for coop_idx in 0..self.game_state.coops.len() {
-        	let mut coop = &mut self.game_state.coops[coop_idx];
-            if Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32)) {
-            	self.game_state.selected_coop = Some(coop_idx);
-            }
+//        for coop_idx in 0..self.game_state.coops.len() {
+//        	let mut coop = &mut self.game_state.coops[coop_idx];
+//            if Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32)) {
+//            	self.game_state.selected_coop = Some(coop_idx);
+//            }
+//        }
+
+		let coop_idx = 0;
+    	let mut coop = &mut self.game_state.coops[coop_idx];
+    	let fake_click = coop.position;
+        if Coop::update_mouse_click(coop, fake_click) {
+        	self.game_state.selected_coop = Some(coop_idx);
         }
+
+        // lololo
+        Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
     }
 
     fn on_mouse_release(&mut self) {
         // Shoot pigeon if mouse button is released
-        for mut coop in self.game_state.coops.iter_mut() {
+        /*for mut coop in self.game_state.coops.iter_mut() {
             if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
                 pigeon.trajectory = Some(self.game_state.aim_trajectory.clone());
                 self.game_state.pigeons.push(pigeon);
             }
+        }*/
+
+        let coop = &mut self.game_state.coops[0];
+        if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
+            pigeon.trajectory = Some(self.game_state.aim_trajectory.clone());
+            self.game_state.pigeons.push(pigeon);
         }
 
         self.game_state.selected_coop = None;
@@ -348,8 +440,6 @@ impl<'a> Game<'a> {
 }
 
 fn main() {
-
-    println!("GGJ-Base");
 
     let mut window: GameWindow = WindowSettings::new(
             "Irradiant Descent",

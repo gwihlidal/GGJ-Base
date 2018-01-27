@@ -6,13 +6,23 @@ pub struct Coop {
     /// The coop's midpoint
     pub position: Point,
     ///  The direction of pigeon emitting, if interacting
-    pub direction : Option<f32>
+    pub direction : Option<f32>,
+    pub fire_rate: f32,
+    cooldown_remaining: f32,
 }
 
 impl Coop {
     /// Create a coop with the given vector
     pub fn new(position: Point) -> Coop {
-        Coop { position: position, direction: None }
+        Coop { position: position, direction: None, fire_rate: 1.0f32, cooldown_remaining: 0f32 }
+    }
+
+    pub fn update(&mut self, dt: f32) {
+        self.cooldown_remaining -= dt;
+    }
+
+    pub fn can_fire(&self) -> bool {
+        self.cooldown_remaining <= 0f32
     }
 
     /// Clicked on coop?
@@ -28,12 +38,17 @@ impl Coop {
 
     /// Emit a pigeon if we release the mouse
     pub fn update_mouse_release(&mut self) -> Option<Pigeon> {
+        if self.cooldown_remaining >= 0f32 {
+            return None;
+        }
+
         if let Some(emit_dir) = self.direction {
             let mut pigeon = Pigeon::new(Vector::new(self.position, emit_dir));
 
             //let rad_sum = self.radius() + pigeon.radius();
             //pigeon.advance(rad_sum);
             self.direction = None;
+            self.cooldown_remaining = 1f32 / self.fire_rate;
             return Some(pigeon);
         }
         None

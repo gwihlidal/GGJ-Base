@@ -22,6 +22,11 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 	return x * x * (3f32 - 2f32 * x)
 }
 
+pub enum RadiationBlendMode {
+	Add,
+	Max,
+}
+
 impl ScalarField {
 	pub fn new(w: usize, h: usize) -> ScalarField {
 		ScalarField {
@@ -31,24 +36,48 @@ impl ScalarField {
 		}
 	}
 
-	pub fn splat(&mut self, pos: Point, radius: f32) {
+	pub fn splat(&mut self, pos: Point, radius: f32, blend_mode: RadiationBlendMode) {
 		let pos = pos * Point::new(self.width as f32, self.height as f32);
 
-		for y in 0..self.height {
-			for x in 0..self.width {
-				let xd = x as f32 - pos.x;
-				let yd = y as f32 - pos.y;
-				self.values[y * self.width + x] += smoothstep(radius, 0.0f32, (xd * xd + yd * yd).sqrt());
+		match blend_mode {
+			RadiationBlendMode::Add => {
+				for y in 0..self.height {
+					for x in 0..self.width {
+						let xd = x as f32 - pos.x;
+						let yd = y as f32 - pos.y;
+						self.values[y * self.width + x] += (-(xd * xd + yd * yd) / (radius * radius)).exp();
+					}
+				}
 			}
+			RadiationBlendMode::Max => {
+				for y in 0..self.height {
+					for x in 0..self.width {
+						let xd = x as f32 - pos.x;
+						let yd = y as f32 - pos.y;
+						self.values[y * self.width + x] = self.values[y * self.width + x].max(
+							(-(xd * xd + yd * yd) / (radius * radius)).exp()
+						);
+					}
+				}
+			}
+		}
+	}
+
+	pub fn decay(&mut self, amount: f32) {
+		for i in 0..self.values.len() {
+			self.values[i] = self.values[i] * amount;
 		}
 	}
 
 	pub fn to_image_buffer(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
 		let mut res = vec![0u8; (self.width * self.height * 4) as usize];
 		for i in 0..self.width * self.height {
-			res[i * 4 + 0] = (smoothstep(0.0, 1.0, self.values[i]) * 0.8f32 * 255f32) as u8;
-			res[i * 4 + 1] = (smoothstep(0.0, 0.5, self.values[i]) * 0.8f32 * 255f32) as u8;
-			res[i * 4 + 2] = 32u8;
+			let bg = 4u8;
+			let fg = (255 - bg) as f32;
+			res[i * 4 + 0] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.8f32 * fg) as u8;
+			//res[i * 4 + 1] = bg + (smoothstep(0.0, 0.5, self.values[i]) * 0.8f32 * 220f32) as u8;
+			res[i * 4 + 1] = res[i * 4 + 0];
+			res[i * 4 + 2] = res[i * 4 + 0];
 			res[i * 4 + 3] = 255u8;
 		}
 		ImageBuffer::from_raw(self.width as u32, self.height as u32, res).unwrap()

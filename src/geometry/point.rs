@@ -56,6 +56,13 @@ impl Point {
     pub fn normalized(&self) -> Point {
         self.div(self.length())
     }
+
+    pub fn lerp(&self, other: &Point, t: f32) -> Point {
+        Point {
+            x: (1.0 - t) * self.x + t * other.x,
+            y: (1.0 - t) * self.y + t * other.y
+        }
+    }
 }
 
 impl PartialEq for Point {

@@ -22,6 +22,10 @@ impl SelectableRect {
         SelectableRect { position: position, size: size, on_click: on_click, time_inside: 0.0 }
     }
 
+    pub fn contains_point(&self, pt: Point) -> bool {
+        self.size.contains(pt - self.position)
+    }
+
     /// Clicked on?
     pub fn update_mouse_release(&mut self, mouse: Point) {
         if self.size.contains(mouse - self.position) {
@@ -43,7 +47,7 @@ impl SelectableRect {
         return 1.0 + self.time_inside.cos();
     }
 
-    fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
+    pub fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
         use graphics::*;
 
         render_state.gl.draw(args.viewport(), |_c, gl| {
