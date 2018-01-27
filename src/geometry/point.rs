@@ -44,6 +44,18 @@ impl Point {
         (self.x - center.x).powi(2) +
             (self.y - center.y).powi(2) < radius.powi(2)
     }
+
+    pub fn dot(&self, other: &Point) -> f32 {
+        self.x * other.x + self.y * other.y
+    }
+
+    pub fn length(&self) -> f32 {
+        self.dot(self).sqrt()
+    }
+
+    pub fn normalized(&self) -> Point {
+        self.div(self.length())
+    }
 }
 
 impl PartialEq for Point {

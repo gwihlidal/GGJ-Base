@@ -89,7 +89,7 @@ pub struct Game {
 impl Game {
     fn new() -> Game {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
-		sf.splat(10, 10, 7f32);
+		sf.splat(20, 15, 9f32);
 		sf.splat(40, 30, 7f32);
 
         Game {
@@ -116,9 +116,13 @@ impl Game {
         self.game_state.coops.push(Coop::new(pos_coop));
     }
 
-    fn simulate_trajectory(&mut self, _mouse_x: f64, _mouse_y: f64) {
-    	let mut pos = Point::new(0.18f32, 0.0f32);
-    	let mut vel = Point::new(0.0f32, 1.0f32);
+    fn simulate_trajectory(&mut self, mouse_x: f64, mouse_y: f64) {
+    	let mut pos = Point::new(0.5f32, 0.0f32);
+    	//let mut vel = Point::new(0.0f32, 1.0f32);
+
+    	// HACK: todo: un-hardcode the screen resolution
+    	let mut vel = Point::new((mouse_x as f32 - 1920f32 * 0.5f32), 1080f32 - mouse_y as f32).normalized();
+    	//let mut vel = vel * 0.1f32;
 
     	let points = &mut self.game_state.aim_trajectory.points;
     	points.clear();
@@ -133,8 +137,6 @@ impl Game {
 
     		pos = pos + vel * delta_t;
     	}
-
-    	println!("points: {:?}", points);
     }
 
     fn update(&mut self, args: &UpdateArgs, mouse_x: f64, mouse_y: f64) {

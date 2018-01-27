@@ -52,8 +52,19 @@ impl ScalarField {
 	}
 
 	pub fn sample_gradient(&self, x: f32, y: f32) -> Point {
-        let x0 = (x * self.width as f32) as usize;
-        let y0 = (y * self.height as f32) as usize;
+        let x0 = x * self.width as f32;
+        let y0 = y * self.height as f32;
+
+        if x0 < 0f32 || y0 < 0f32 {
+        	return Point::new(0f32, 0f32);
+        }
+
+        let x0 = x0 as usize;
+        let y0 = y0 as usize;
+
+        if x0+1 >= self.width || y0+1 >= self.height {
+        	return Point::new(0f32, 0f32);
+        }
 
         let h00 = self.values[y0 * self.width + x0];
         let h01 = self.values[y0 * self.width + x0 + 1];
