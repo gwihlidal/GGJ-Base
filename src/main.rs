@@ -169,12 +169,20 @@ impl Game {
         use geometry::traits::Position;
 
         const ORANGE:  [f32; 4] = [1.0, 0.5647, 0.0039, 1.0];
-        render_state.gl.draw(args.viewport(), |c, gl| {
-            let square = graphics::rectangle::square(0.0, 0.0, (_coop.radius()*2.0) as f64);
+        use graphics::math::Vec2d;
 
-            let transform = c.transform.trans(_coop.x() as f64, _coop.y() as f64)
-                                        .trans(-_coop.radius() as f64, -_coop.radius() as f64);
-            graphics::rectangle(ORANGE, square, transform, gl);
+        render_state.gl.draw(args.viewport(), |c, gl| {
+            
+            let mut transform = c.transform.trans(_coop.x() as f64, _coop.y() as f64)
+                                        .scale(_coop.radius() as f64, _coop.radius() as f64);
+
+            let mut pentagon: [Vec2d;5] = [[1.0,0.0], [0.309, -0.951], [-0.809, -0.588], [-0.809, 0.588], [0.309, 0.951]];
+            if let Some(dir) = _coop.direction {
+                pentagon[0][0] *= 2.0;
+                transform = transform.rot_rad(dir as f64);
+            }
+
+            graphics::polygon(ORANGE, &pentagon, transform, gl);
         });
     }
 
@@ -242,6 +250,30 @@ impl Game {
             Game::render_coop(render_state, args, coop);
         }
     }
+
+//game_state: &mut GameState,
+    fn on_mouse_move(&mut self, mouse: [f64;2]) {
+        // Update coop pigeon shooting directions
+        for mut coop in self.game_state.coops.iter_mut() {
+            Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+        }
+    }
+
+    fn on_mouse_click(&mut self, mouse: [f64;2]) {
+        // Select coop if clicking inside
+        for mut coop in self.game_state.coops.iter_mut() {
+            Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+        }
+    }
+
+    fn on_mouse_release(&mut self) {
+        // Shoot pigeon if mouse button is released
+        for mut coop in self.game_state.coops.iter_mut() {
+            if let Some(pigeon) = Coop::update_mouse_release(coop) {
+                self.game_state.pigeons.push(pigeon);
+            }
+        }
+    }
 }
 
 fn main() {
@@ -268,6 +300,7 @@ fn main() {
     let mut game = Game::new();
     game.on_load(&window);
 
+    let mut last_mouse_pos: [f64;2] = [0.0,0.0];
     // http://blog.piston.rs/2014/09/13/rust-event/
 
     let mut events = Events::new(EventSettings::new());
@@ -289,8 +322,14 @@ fn main() {
             // println!("Idle {}", _args.dt);
         }
 
-        if let Some(Button::Mouse(button)) = e.press_args() {
-            println!("Pressed mouse button '{:?}'", button);
+
+        if let Some(mouse_pos) = e.mouse_cursor_args() {
+            last_mouse_pos = mouse_pos;
+        }
+            // Update coop pigeon emission
+        if let Some(Button::Mouse(button)) = e.press_args(){
+            println!("Got mouse press");
+            game.on_mouse_click(last_mouse_pos);
 
             if button == MouseButton::Left {
                 play_sound("assets/dummy.wav");
@@ -298,6 +337,13 @@ fn main() {
             else if button == MouseButton::Right {
                 play_sound("assets/footstep.wav");
             }
+
+            println!("Pressed mouse button '{:?}'", button);
+        }
+
+        if let Some(Button::Mouse(_)) = e.release_args() {
+            println!("Got mouse release");
+            game.on_mouse_release();
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
@@ -326,6 +372,7 @@ fn main() {
         e.mouse_cursor(|x, y| {
             cursor = [x, y];
             println!("Mouse moved '{} {}'", x, y);
+            game.on_mouse_move(cursor);
         });
         e.mouse_scroll(|dx, dy| println!("Scrolled mouse '{}, {}'", dx, dy));
         e.mouse_relative(|dx, dy| println!("Relative mouse moved '{} {}'", dx, dy));

@@ -29,6 +29,7 @@ impl Coop {
             let mut pidgeon = Pigeon::new(Vector::new(self.position, emit_dir));
             let rad_sum = self.radius() + pidgeon.radius();
             pidgeon.advance(rad_sum);
+            self.direction = None;
             return Some(pidgeon);
         }
         None
@@ -39,7 +40,7 @@ impl Coop {
         // Clicked before? Moving the direction
         if self.direction.is_some() {
             let next_dir = mouse - self.position;
-            self.direction = Some(next_dir.x.atan2(next_dir.y));
+            self.direction = Some(next_dir.y.atan2(next_dir.x));
         }
     }
 }
