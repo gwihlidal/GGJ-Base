@@ -392,6 +392,7 @@ fn main() {
 }
 
 fn play_sound(sound_file: &str) {
+    #[allow(deprecated)]
     let endpoint = rodio::get_default_endpoint().unwrap();
     let sink = rodio::Sink::new(&endpoint);
      
