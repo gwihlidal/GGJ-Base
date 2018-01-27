@@ -53,5 +53,5 @@ impl ::geometry::Position for Coop {
 }
 
 impl Collide for Coop {
-    fn radius(&self) -> f32 { 70.0 }
+    fn radius(&self) -> f32 { 0.1 }
 }

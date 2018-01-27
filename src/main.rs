@@ -130,7 +130,7 @@ impl<'a> Game<'a> {
         };
         self.game_state.pigeons.push(Pigeon::new(pos));
 
-        let pos_coop = geometry::Point::new(200.0, 200.0);
+        let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
 
         self.assets.game_over = Some(Texture::from_path(
@@ -138,12 +138,12 @@ impl<'a> Game<'a> {
                             &TextureSettings::new()).unwrap());
     }
 
-    fn simulate_trajectory(&mut self, mouse_x: f64, mouse_y: f64) {
+    fn simulate_trajectory(&mut self, cursor: Point) {
     	let mut pos = Point::new(0.0f32, -1.0f32);
     	//let mut vel = Point::new(0.0f32, 1.0f32);
 
     	// HACK: todo: un-hardcode the screen resolution
-    	let mut vel = Point::new((mouse_x as f32 - 1920f32 * 0.5f32), 1080f32 - mouse_y as f32).normalized();
+    	let mut vel = (cursor - pos).normalized();
     	//let mut vel = vel * 0.1f32;
 
     	let points = &mut self.game_state.aim_trajectory.points;
@@ -161,10 +161,10 @@ impl<'a> Game<'a> {
     	}
     }
 
-    fn update(&mut self, args: &UpdateArgs, mouse_x: f64, mouse_y: f64) {
+    fn update(&mut self, args: &UpdateArgs, cursor: Point) {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
-        self.simulate_trajectory(mouse_x, mouse_y);
+        self.simulate_trajectory(cursor);
     }
 
     fn render_pigeon(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
@@ -193,10 +193,11 @@ impl<'a> Game<'a> {
         const ORANGE:  [f32; 4] = [1.0, 0.5647, 0.0039, 1.0];
         use graphics::math::Vec2d;
 
-        render_state.gl.draw(args.viewport(), |c, gl| {
+        render_state.gl.draw(args.viewport(), |_c, gl| {
 
-            let mut transform = c.transform.trans(_coop.x() as f64, _coop.y() as f64)
-                                        .scale(_coop.radius() as f64, _coop.radius() as f64);
+            let mut transform = Game::std_transform()
+				.trans(_coop.x() as f64, _coop.y() as f64)
+				.scale(_coop.radius() as f64, _coop.radius() as f64);
 
             let mut pentagon: [Vec2d;5] = [[1.0,0.0], [0.309, -0.951], [-0.809, -0.588], [-0.809, 0.588], [0.309, 0.951]];
             if let Some(dir) = _coop.direction {
@@ -208,9 +209,13 @@ impl<'a> Game<'a> {
         });
     }
 
-    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &PigeonTrajectory) {
+    fn std_transform() -> Matrix2d {
+    	use graphics::*;
     	let aspect = 16.0 / 9.0;
-    	let scale_uniform = graphics::math::identity().scale(1.0 / aspect, 1.0);
+    	graphics::math::identity().scale(1.0 / aspect, 1.0)
+    }
+
+    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &PigeonTrajectory) {
     	if trajectory.points.len() < 2 { 
     		return;
     	}
@@ -223,14 +228,14 @@ impl<'a> Game<'a> {
 	    		trajectory.points[i-1].y as f64,
 	    		trajectory.points[i].x as f64,
 	    		trajectory.points[i].y as f64,
-	    	], &Default::default(), scale_uniform, gl);
+	    	], &Default::default(), Game::std_transform(), gl);
 	    }
     }
 
-    fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
+    fn render(_assets: &Assets, render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, cursor: Point) {
 
         use graphics::*;
-        let mouse_square = rectangle::square(0.0, 0.0, 50.0);
+        let mouse_square = rectangle::square(0.0, 0.0, 0.1);
 
         render_state.gl.draw(args.viewport(), |c, gl| {
         	let sf = &game_state.irradiance_field;
@@ -240,7 +245,6 @@ impl<'a> Game<'a> {
 	        );
 
 	        let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
-
             Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
 			    &sf_texture,
 			    &Default::default(),
@@ -254,9 +258,10 @@ impl<'a> Game<'a> {
             Game::render_trajectory(gl, &game_state.aim_trajectory);
 
             let rotation = game_state.rotation;
-            let mouse_transform = c.transform.trans(mouse_x, mouse_y)
-                                       .rot_rad(rotation)
-                                       .trans(-25.0, -25.0);
+            let mouse_transform = Game::std_transform()
+            	.trans(cursor.x as f64, cursor.y as f64)
+				.rot_rad(rotation)//.trans(-25.0, -25.0)
+				;
 
             // Draw a box rotating around the middle of the screen.
             const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
@@ -322,7 +327,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut cursor = [0.0, 0.0];
+	let mut cursor = Point::new(0f32, 0f32);
 
     //let assets = find_folder::Search::ParentsThenKids(3, 3)
     //    .for_folder("assets").unwrap();
@@ -336,16 +341,16 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            Game::render(&game.assets, &mut game.render_state, &game.game_state, &mut game.glyph_cache, &r, cursor[0], cursor[1]);
+            Game::render(&game.assets, &mut game.render_state, &game.game_state, &mut game.glyph_cache, &r, cursor);
         }
 
         if let Some(u) = e.update_args() {
-            game.update(&u, cursor[0], cursor[1]);
+            game.update(&u, cursor);
         }
 
         // Update coop pigeon emission
         if let Some(Button::Mouse(button)) = e.press_args(){
-            game.on_mouse_click(cursor);
+            game.on_mouse_click([cursor.x as f64, cursor.y as f64]);
 
             if button == MouseButton::Left {
                 play_sound("assets/dummy.wav");
@@ -366,8 +371,13 @@ fn main() {
         }
 
         e.mouse_cursor(|x, y| {
-            cursor = [x, y];
-            game.on_mouse_move(cursor);
+            cursor = Point::new(x as f32, y as f32);
+			cursor = cursor
+			/ Point::new(1920 as f32, 1080 as f32)
+			- Point::new(0.5f32, 0.5f32);
+			cursor = cursor * Point::new(16.0 / 9.0 * 2.0, -2.0);
+
+            game.on_mouse_move([cursor.x as f64, cursor.y as f64]);
         });
 
         e.text(|text| println!("Typed '{}'", text));
