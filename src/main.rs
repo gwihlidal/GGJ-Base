@@ -35,6 +35,7 @@ use geometry::point::{Point};
 #[macro_use]
 pub mod models;
 
+#[allow(unused_imports)]
 use piston::window::{ AdvancedWindow, /*Window, */WindowSettings };
 use piston::event_loop::*;
 use piston::input::*;
@@ -174,7 +175,7 @@ impl<'a> Game<'a> {
         use graphics::math::Vec2d;
 
         render_state.gl.draw(args.viewport(), |c, gl| {
-            
+
             let mut transform = c.transform.trans(_coop.x() as f64, _coop.y() as f64)
                                         .scale(_coop.radius() as f64, _coop.radius() as f64);
 
@@ -260,7 +261,6 @@ impl<'a> Game<'a> {
         }
     }
 
-//game_state: &mut GameState,
     fn on_mouse_move(&mut self, mouse: [f64;2]) {
         // Update coop pigeon shooting directions
         for mut coop in self.game_state.coops.iter_mut() {
@@ -300,7 +300,6 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut capture_cursor = false;
     let mut cursor = [0.0, 0.0];
 
     //let assets = find_folder::Search::ParentsThenKids(3, 3)
@@ -310,7 +309,6 @@ fn main() {
     let mut game = Game::new(glyph_cache);
     game.on_load(&window);
 
-    let mut last_mouse_pos: [f64;2] = [0.0,0.0];
     // http://blog.piston.rs/2014/09/13/rust-event/
 
     let mut events = Events::new(EventSettings::new());
@@ -323,23 +321,9 @@ fn main() {
             game.update(&u, cursor[0], cursor[1]);
         }
 
-        if let Some(cursor) = e.cursor_args() {
-            if cursor { println!("Mouse entered"); }
-            else { println!("Mouse left"); }
-        }
-
-        if let Some(_args) = e.idle_args() {
-            // println!("Idle {}", _args.dt);
-        }
-
-
-        if let Some(mouse_pos) = e.mouse_cursor_args() {
-            last_mouse_pos = mouse_pos;
-        }
-            // Update coop pigeon emission
+        // Update coop pigeon emission
         if let Some(Button::Mouse(button)) = e.press_args(){
-            println!("Got mouse press");
-            game.on_mouse_click(last_mouse_pos);
+            game.on_mouse_click(cursor);
 
             if button == MouseButton::Left {
                 play_sound("assets/dummy.wav");
@@ -347,50 +331,29 @@ fn main() {
             else if button == MouseButton::Right {
                 play_sound("assets/footstep.wav");
             }
-
-            println!("Pressed mouse button '{:?}'", button);
         }
 
         if let Some(Button::Mouse(_)) = e.release_args() {
-            println!("Got mouse release");
             game.on_mouse_release();
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
             if key == Key::C {
-                println!("Turned capture cursor on");
-                capture_cursor = !capture_cursor;
-                window.set_capture_cursor(capture_cursor);
                 pigeon_sound();
-            }
-
-            println!("Pressed keyboard key '{:?}'", key);
-        }
-
-        if let Some(args) = e.button_args() {
-            println!("Scancode {:?}", args.scancode);
-        }
-
-        if let Some(button) = e.release_args() {
-            match button {
-                Button::Keyboard(key) => println!("Released keyboard key '{:?}'", key),
-                Button::Mouse(button) => println!("Released mouse button '{:?}'", button),
-                Button::Controller(button) => println!("Released controller button '{:?}'", button),
             }
         }
 
         e.mouse_cursor(|x, y| {
             cursor = [x, y];
-            println!("Mouse moved '{} {}'", x, y);
             game.on_mouse_move(cursor);
         });
-        e.mouse_scroll(|dx, dy| println!("Scrolled mouse '{}, {}'", dx, dy));
-        e.mouse_relative(|dx, dy| println!("Relative mouse moved '{} {}'", dx, dy));
+
         e.text(|text| println!("Typed '{}'", text));
         e.resize(|w, h| println!("Resized '{}, {}'", w, h));
     }
 }
 
+#[allow(deprecated)]
 fn play_sound(sound_file: &str) {
     #[allow(deprecated)]
     let endpoint = rodio::get_default_endpoint().unwrap();
