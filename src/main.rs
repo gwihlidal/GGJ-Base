@@ -305,6 +305,7 @@ fn main() {
                 println!("Turned capture cursor on");
                 capture_cursor = !capture_cursor;
                 window.set_capture_cursor(capture_cursor);
+                pigeon_sound();
             }
 
             println!("Pressed keyboard key '{:?}'", key);
@@ -341,6 +342,19 @@ fn play_sound(sound_file: &str) {
     let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
 
     sink.append(source);
-    sink.detach();
-   
+    sink.detach();  
+}
+
+fn pigeon_sound()
+{
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let x: u32 = rng.gen_range(1,4);
+    let s: String = x.to_string();
+    let ss: &str = &s;
+
+    let mut sound_file = String::from("assets/coo");
+    sound_file.push_str(ss);
+    sound_file.push_str(".wav");
+    play_sound(&sound_file);
 }
