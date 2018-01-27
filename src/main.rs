@@ -402,7 +402,7 @@ impl<'a> Game<'a> {
 
 fn main() {
 
-    window: GameWindow = WindowSettings::new(
+    let mut window: GameWindow = WindowSettings::new(
             "Irradiant Descent",
             [1920, 1080]
         )
