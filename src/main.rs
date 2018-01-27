@@ -385,7 +385,7 @@ fn pigeon_sound()
 {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    let x: u32 = rng.gen_range(1,4);
+    let x: u32 = rng.gen_range(1,13);
     let s: String = x.to_string();
     let ss: &str = &s;
 
