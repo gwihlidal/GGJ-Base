@@ -79,11 +79,13 @@ pub struct GameState {
     aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
     game_over: bool,
+    pigeon_f0: bool,
 }
 
 pub struct Assets {
     game_over: Texture,
-    pigeon_points_f0: Vec<(geometry::Point, geometry::Point)>
+    pigeon_points_f0: Vec<(geometry::Point, geometry::Point)>,
+    pigeon_points_f1: Vec<(geometry::Point, geometry::Point)>,
 }
 
 pub struct Game<'a> {
@@ -111,6 +113,7 @@ impl<'a> Game<'a> {
             	irradiance_field: sf,
             	aim_trajectory: Trajectory { points: Vec::new() },
             	game_over: false,
+                pigeon_f0: true,
             	selected_coop: None,
             },
             glyph_cache: glyphs,
@@ -119,7 +122,8 @@ impl<'a> Game<'a> {
                     &Path::new("./assets/GameOver.png"),
                     &TextureSettings::new()
                 ).unwrap(),
-                pigeon_points_f0: Vec::new()
+                pigeon_points_f0: Vec::new(),
+                pigeon_points_f1: Vec::new(),
             }
         }
     }
@@ -128,8 +132,7 @@ impl<'a> Game<'a> {
         let pos_coop = geometry::Point::new(0.0, -0.7);
         self.game_state.coops.push(Coop::new(pos_coop));
 
-       // let mut pigeon_points : Vec<(geometry::Point, geometry::Point)> = Vec::new();
-
+        // Pigeon animation frame #0
         self.assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
         self.assets.pigeon_points_f0.push((Point::new(100.0, 442.043),   Point::new(250.443, 57.113)));
         self.assets.pigeon_points_f0.push((Point::new(250.443, 57.113),  Point::new(400.0, 442.043)));
@@ -139,6 +142,17 @@ impl<'a> Game<'a> {
         self.assets.pigeon_points_f0.push((Point::new(191.678, 205.907), Point::new(55.156, 147.404)));
         self.assets.pigeon_points_f0.push((Point::new(55.156, 147.404),  Point::new(125.179, 376.547)));
         self.assets.pigeon_points_f0.push((Point::new(125.179, 376.547), Point::new(191.678, 205.907)));
+
+        // Pigeon animation frame #1
+        self.assets.pigeon_points_f1.push((Point::new(400.0, 442.043), Point::new(100.0, 442.043)));
+        self.assets.pigeon_points_f1.push((Point::new(100.0, 442.043), Point::new(250.443, 57.113)));
+        self.assets.pigeon_points_f1.push((Point::new(250.443, 57.113), Point::new(400.0, 442.043)));
+        self.assets.pigeon_points_f1.push((Point::new(308.156, 205.907), Point::new(449.411, 311.876)));
+        self.assets.pigeon_points_f1.push((Point::new(449.411, 311.876), Point::new(374.655, 376.547)));
+        self.assets.pigeon_points_f1.push((Point::new(374.655, 376.547), Point::new(308.156, 205.907)));
+        self.assets.pigeon_points_f1.push((Point::new(192.411, 205.907), Point::new(51.156, 311.876)));
+        self.assets.pigeon_points_f1.push((Point::new(51.156, 311.876), Point::new(125.912, 376.547)));
+        self.assets.pigeon_points_f1.push((Point::new(125.912, 376.547), Point::new(192.411, 205.907)));
     }
 
     fn simulate_trajectory(&self, origin: Point, cursor: Point) -> Trajectory {
@@ -215,9 +229,15 @@ impl<'a> Game<'a> {
 				.trans(pigeon.x() as f64, pigeon.y() as f64)
 				.rot_rad(rotation);
 
+            let pigeon_points = if game_state.pigeon_f0 {
+                &assets.pigeon_points_f0
+            } else {
+                &assets.pigeon_points_f1
+            };
+
             let scale = 0.00023;
-            for i in 0..assets.pigeon_points_f0.len() {
-                let (s, e) = assets.pigeon_points_f0[i];
+            for i in 0..pigeon_points.len() {
+                let (s, e) = pigeon_points[i];
                 graphics::Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.002).draw([
                     (s.x - 256.0) as f64 * scale,
                     (s.y - 256.0) as f64 * -scale,
@@ -373,6 +393,11 @@ impl<'a> Game<'a> {
         // Test with toggle
         self.game_state.game_over = !self.game_state.game_over;
     }
+
+    fn on_animate_pigeon(&mut self) {
+        // Test with toggle
+        self.game_state.pigeon_f0 = !self.game_state.pigeon_f0;
+    }
 }
 
 fn main() {
@@ -428,6 +453,10 @@ fn main() {
 
             if key == Key::G {
                 game.on_game_over();
+            }
+
+            if key == Key::K {
+                game.on_animate_pigeon();
             }
         }
 
