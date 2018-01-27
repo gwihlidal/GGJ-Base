@@ -33,6 +33,9 @@ impl Pigeon {
 
     /// Update the pigeon's position
     pub fn update(&mut self, units: f32) -> PigeonStatus {
+        let prev_pos = self.vector.position;
+        let mut units = units;
+
         if let Some(ref traj) = self.trajectory {
             let mut target = self.vector.position;
 
@@ -40,6 +43,8 @@ impl Pigeon {
                 target = traj.points[self.trajectory_pos];
                 let dist = (target - self.vector.position).length();
                 if dist < units {
+                    self.vector.position = target;
+                    units -= dist;
                     self.trajectory_pos += 1;
                 } else {
                     break;
@@ -54,7 +59,7 @@ impl Pigeon {
 
             self.vector.position = self.vector.position + target;
 
-            if dist < 1e-3 {
+            if (prev_pos - self.vector.position).length() < 1e-3 {
                 PigeonStatus::ReachedDestination
             } else {
                 self.vector.direction = Pigeon::calculate_rotation(target);

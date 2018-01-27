@@ -213,8 +213,7 @@ impl<'a> Game<'a> {
 
             let transform = Game::std_transform()
 				.trans(pigeon.x() as f64, pigeon.y() as f64)
-				.rot_rad(rotation)
-				.trans(-0.05, -0.05);
+				.rot_rad(rotation);
 
             let scale = 0.00023;
             for i in 0..assets.pigeon_points_f0.len() {
