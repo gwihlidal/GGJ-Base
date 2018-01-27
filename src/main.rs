@@ -63,6 +63,8 @@ use glutin_window::GlutinWindow as GameWindow;
 
 use std::path::Path;
 use std::io::BufReader;
+use std::f32;
+use std::f64;
 use models::pigeon::*;
 use models::coop::Coop;
 use geometry::traits::Collide;
@@ -80,6 +82,7 @@ pub struct GameState {
     selected_coop: Option<usize>,
     game_over: bool,
     pigeon_f0: bool,
+    pigeon_timer: f64,
 }
 
 pub struct Assets {
@@ -115,6 +118,7 @@ impl<'a> Game<'a> {
             	game_over: false,
                 pigeon_f0: true,
             	selected_coop: None,
+                pigeon_timer: 0.0,
             },
             glyph_cache: glyphs,
             assets: Assets {
@@ -209,6 +213,8 @@ impl<'a> Game<'a> {
         	self.game_state.aim_trajectory =
         		self.simulate_trajectory(self.game_state.coops[coop_idx].position, cursor);
         }
+
+        self.game_state.pigeon_timer += args.dt;
     }
 
     fn render_pigeon(assets: &Assets, render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, pigeon: &Pigeon) {
@@ -229,20 +235,19 @@ impl<'a> Game<'a> {
 				.trans(pigeon.x() as f64, pigeon.y() as f64)
 				.rot_rad(rotation);
 
-            let pigeon_points = if game_state.pigeon_f0 {
-                &assets.pigeon_points_f0
-            } else {
-                &assets.pigeon_points_f1
-            };
+            let remapped = (game_state.pigeon_timer * 40.0).sin() * 0.5 + 0.5; // -1...1 -> 0...1
 
             let scale = 0.00023;
-            for i in 0..pigeon_points.len() {
-                let (s, e) = pigeon_points[i];
+            for i in 0..assets.pigeon_points_f0.len() {
+                let (s_o, e_o) = assets.pigeon_points_f0[i];
+                let (s_p, e_p) = assets.pigeon_points_f1[i];
+                let animated_s = s_o.lerp(&s_p, remapped as f32);
+                let animated_e = e_o.lerp(&e_p, remapped as f32);
                 graphics::Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.002).draw([
-                    (s.x - 256.0) as f64 * scale,
-                    (s.y - 256.0) as f64 * -scale,
-                    (e.x - 256.0) as f64 * scale,
-                    (e.y - 256.0) as f64 * -scale,
+                    (animated_s.x - 256.0) as f64 * scale,
+                    (animated_s.y - 256.0) as f64 * -scale,
+                    (animated_e.x - 256.0) as f64 * scale,
+                    (animated_e.y - 256.0) as f64 * -scale,
                 ], &Default::default(), transform, gl);
             }
         });
@@ -393,18 +398,11 @@ impl<'a> Game<'a> {
         // Test with toggle
         self.game_state.game_over = !self.game_state.game_over;
     }
-
-    fn on_animate_pigeon(&mut self) {
-        // Test with toggle
-        self.game_state.pigeon_f0 = !self.game_state.pigeon_f0;
-    }
 }
 
 fn main() {
 
-    println!("GGJ-Base");
-
-    let mut window: GameWindow = WindowSettings::new(
+    window: GameWindow = WindowSettings::new(
             "Irradiant Descent",
             [1920, 1080]
         )
@@ -453,10 +451,6 @@ fn main() {
 
             if key == Key::G {
                 game.on_game_over();
-            }
-
-            if key == Key::K {
-                game.on_animate_pigeon();
             }
         }
 
