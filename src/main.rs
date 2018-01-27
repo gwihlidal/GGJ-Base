@@ -117,7 +117,24 @@ impl Game {
     }
 
     fn simulate_trajectory(&mut self, _mouse_x: f64, _mouse_y: f64) {
+    	let mut pos = Point::new(0.18f32, 0.0f32);
+    	let mut vel = Point::new(0.0f32, 1.0f32);
 
+    	let points = &mut self.game_state.aim_trajectory.points;
+    	points.clear();
+
+    	let iter_count = 70;
+    	let delta_t = 0.03f32;
+
+    	for _ in 0..iter_count {
+    		points.push(pos);
+    		let grad = self.game_state.irradiance_field.sample_gradient(pos.x, pos.y);
+    		vel = vel * 0.98 + grad * 0.23;
+
+    		pos = pos + vel * delta_t;
+    	}
+
+    	println!("points: {:?}", points);
     }
 
     fn update(&mut self, args: &UpdateArgs, mouse_x: f64, mouse_y: f64) {
@@ -159,6 +176,24 @@ impl Game {
         });
     }
 
+    fn render_trajectory(gl: &mut opengl_graphics::GlGraphics, trajectory: &PigeonTrajectory) {
+    	let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
+    	if trajectory.points.len() < 2 { 
+    		return;
+    	}
+
+    	use graphics::*;
+
+    	for i in 1..trajectory.points.len() {
+	    	Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.001).draw([
+	    		trajectory.points[i-1].x as f64,
+	    		trajectory.points[i-1].y as f64,
+	    		trajectory.points[i].x as f64,
+	    		trajectory.points[i].y as f64,
+	    	], &Default::default(), scale_0_to_1, gl);
+	    }
+    }
+
     fn render(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
 
         use graphics::*;
@@ -171,15 +206,19 @@ impl Game {
 	            &TextureSettings::new()
 	        );
 
+	        let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
+
             Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
 			    &sf_texture,
 			    &Default::default(),
-			    graphics::math::identity().trans(-1.0, -1.0).scale(2.0 / sf.width as f64, 2.0 / sf.height as f64),
+			    scale_0_to_1.scale(1.0 / sf.width as f64, 1.0 / sf.height as f64),
 			    gl
 			);
 
             // Test line rendering
-            Line::new([1.0, 1.0, 1.0, 1.0], 0.001).draw([-1f64, -1f64, 1f64, 1f64], &Default::default(), graphics::math::identity(), gl);
+            // Line::new([1.0, 1.0, 1.0, 1.0], 0.001).draw([0f64, 0f64, 1f64, 1f64], &Default::default(), scale_0_to_1, gl);
+
+            Game::render_trajectory(gl, &game_state.aim_trajectory);
 
             let rotation = game_state.rotation;
             let mouse_transform = c.transform.trans(mouse_x, mouse_y)

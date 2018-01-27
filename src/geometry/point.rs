@@ -2,7 +2,7 @@ use rand::Rng;
 use super::Size;
 use std::ops::{Add, Sub, Mul, Div};
 
-#[derive(Clone, Default, Copy)]
+#[derive(Clone, Default, Copy, Debug)]
 pub struct Point {
     pub x: f32,
     pub y: f32
@@ -113,7 +113,7 @@ impl Mul<f32> for Point {
     fn mul(self, _rhs: f32) -> Point {
         Point {
             x: self.x * _rhs,
-            y: self.x * _rhs,
+            y: self.y * _rhs,
         }
     }
 }
