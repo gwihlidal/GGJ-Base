@@ -40,7 +40,7 @@ use piston::event_loop::*;
 use piston::input::*;
 
 #[allow(unused_imports)]
-use opengl_graphics::{ GlGraphics, Texture, TextureSettings, OpenGL };
+use opengl_graphics::{ GlGraphics, Texture, TextureSettings, OpenGL, GlyphCache };
 
 #[allow(unused_imports)]
 use graphics::math::Matrix2d;
@@ -70,7 +70,7 @@ pub struct PigeonTrajectory {
 }
 
 pub struct RenderState {
-    gl: GlGraphics // OpenGL drawing backend.
+    gl: GlGraphics, // OpenGL drawing backend.
 }
 
 pub struct GameState {
@@ -81,13 +81,14 @@ pub struct GameState {
     aim_trajectory: PigeonTrajectory,
 }
 
-pub struct Game {
+pub struct Game<'a> {
     render_state: RenderState,
-    game_state: GameState
+    game_state: GameState,
+    glyph_cache: GlyphCache<'a>
 }
 
-impl Game {
-    fn new() -> Game {
+impl<'a> Game<'a> {
+    fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
 		let mut sf = ScalarField::new(16 * 4, 9 * 4);
 		sf.splat(20, 15, 9f32);
 		sf.splat(40, 30, 7f32);
@@ -100,7 +101,8 @@ impl Game {
             	coops: Vec::new(),
             	irradiance_field: sf,
             	aim_trajectory: PigeonTrajectory { points: Vec::new() },
-            }
+            },
+            glyph_cache: glyphs
         }
     }
 
@@ -204,7 +206,7 @@ impl Game {
 	    }
     }
 
-    fn render(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
+    fn render(render_state: &mut RenderState, game_state: &GameState, glyph_cache: &mut GlyphCache, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
 
         use graphics::*;
         let mouse_square = rectangle::square(0.0, 0.0, 50.0);
@@ -238,6 +240,13 @@ impl Game {
             // Draw a box rotating around the middle of the screen.
             const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
             rectangle(RED, mouse_square, mouse_transform, gl);
+
+            text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("PIGEON SIMULATOR 2018",
+                                                                     glyph_cache,
+                                                                     &DrawState::default(),
+                                                                     c.transform
+                                                                         .trans(10.0, 100.0),
+                                                                     gl).unwrap();
         });
 
         let pigeons = &game_state.pigeons;
@@ -297,7 +306,8 @@ fn main() {
     //let assets = find_folder::Search::ParentsThenKids(3, 3)
     //    .for_folder("assets").unwrap();
 
-    let mut game = Game::new();
+    let glyph_cache = GlyphCache::new("assets/FiraSans-Regular.ttf", (), TextureSettings::new()).unwrap();
+    let mut game = Game::new(glyph_cache);
     game.on_load(&window);
 
     let mut last_mouse_pos: [f64;2] = [0.0,0.0];
@@ -306,7 +316,7 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            Game::render(&mut game.render_state, &game.game_state, &r, cursor[0], cursor[1]);
+            Game::render(&mut game.render_state, &game.game_state, &mut game.glyph_cache, &r, cursor[0], cursor[1]);
         }
 
         if let Some(u) = e.update_args() {
