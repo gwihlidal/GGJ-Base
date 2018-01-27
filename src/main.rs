@@ -95,7 +95,7 @@ impl Game {
         // Rotate 2 radians per second.
         self.game_state.rotation += 2.0 * args.dt;
     }
-    
+
     fn render_pigeon(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, _pigeon: &Pigeon) {
         use graphics::*;
         use geometry::traits::Position;
@@ -116,9 +116,10 @@ impl Game {
     }
 
     fn render(render_state: &mut RenderState, game_state: &GameState, args: &RenderArgs, mouse_x: f64, mouse_y: f64) {
-        
+
+        use graphics::*;
         let mouse_square = rectangle::square(0.0, 0.0, 50.0);
-        
+
         let mut sf = ScalarField::new(16 * 4, 9 * 4);
         sf.splat(10, 10, 7f32);
         sf.splat(40, 30, 7f32);
@@ -127,19 +128,22 @@ impl Game {
             &sf.to_image_buffer(),
             &TextureSettings::new()
         );
-        
-        render_state.gl.draw(args.viewport(), |_c, gl| {
+
+        render_state.gl.draw(args.viewport(), |c, gl| {
             Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
 			    &texture,
 			    &Default::default(),
 			    graphics::math::identity().trans(-1.0, -1.0).scale(2.0 / sf.width as f64, 2.0 / sf.height as f64),
 			    gl
 			);
+
+            let rotation = game_state.rotation;
             let mouse_transform = c.transform.trans(mouse_x, mouse_y)
                                        .rot_rad(rotation)
                                        .trans(-25.0, -25.0);
-                                       
+
             // Draw a box rotating around the middle of the screen.
+            const RED:  [f32; 4] = [1.0, 0.0, 0.0, 1.0];
             rectangle(RED, mouse_square, mouse_transform, gl);
         });
 
