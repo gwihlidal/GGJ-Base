@@ -16,10 +16,13 @@ impl Coop {
     }
 
     /// Clicked on coop?
-    pub fn update_mouse_click(&mut self, mouse: Point) {
+    pub fn update_mouse_click(&mut self, mouse: Point) -> bool {
         if self.position.squared_distance_to(&mouse) < self.radius() * self.radius() {
             // Set to Some basically
             self.direction = Some(0f32);
+            true
+        } else {
+            false
         }
     }
 
