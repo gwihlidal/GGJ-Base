@@ -159,6 +159,9 @@ impl Game {
 			    gl
 			);
 
+            // Test line rendering
+            Line::new([1.0, 1.0, 1.0, 1.0], 0.001).draw([-1f64, -1f64, 1f64, 1f64], &Default::default(), graphics::math::identity(), gl);
+
             let rotation = game_state.rotation;
             let mouse_transform = c.transform.trans(mouse_x, mouse_y)
                                        .rot_rad(rotation)
@@ -270,7 +273,7 @@ fn main() {
     }
 }
 
-fn play_sound(sound_file: &str){
+fn play_sound(sound_file: &str) {
     let endpoint = rodio::get_default_endpoint().unwrap();
     let sink = rodio::Sink::new(&endpoint);
      
