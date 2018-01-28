@@ -341,7 +341,10 @@ impl<'a> Game<'a> {
 	        			}
 
 	        			for i in 0..p.len() {
-	        				p[i][0] += (p[i][1] * 0.5 + y as f64 + time * 2.0).sin() * 0.25;
+	        				let x_t = p[i][1] * 0.5 + y as f64 + time * 2.1234;
+	        				let y_t = p[i][0] * 0.5 + x as f64 + time * 1.865;
+	        				p[i][0] += x_t.sin() * 0.25;
+	        				p[i][1] += y_t.sin() * 0.25;
 	        			}
 	        			graphics::polygon(col, &p[..], transform, gl);
 	        		}
@@ -420,6 +423,8 @@ impl<'a> Game<'a> {
 			    gl
 			);
 
+	        game_state.system_hubs.render_systems(gl);
+
 			Self::render_radiation(gl, &game_state.irradiance_field, game_state.pigeon_timer);
 
             // Test line rendering
@@ -452,7 +457,6 @@ impl<'a> Game<'a> {
             Game::render_coop(render_state, args, coop);
         }
 
-        game_state.system_hubs.render_systems(render_state, args);
         for bubble in game_state.bubbles.iter() {
                 bubble.render_bubble(render_state, args);
         }

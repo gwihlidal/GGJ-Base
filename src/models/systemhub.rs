@@ -5,6 +5,7 @@ use std::f32;
 use piston::input::RenderArgs;
 use geometry::{Point, Size};
 use models::selectable::SelectableRect;
+use opengl_graphics;
 use RenderState;
 use UpdateArgs;
 
@@ -43,8 +44,8 @@ impl SystemHub {
         }
     }
 
-    pub fn render_hub(&self, render_state: &mut RenderState, args: &RenderArgs) {
-        self.hub.render_rect(render_state, args, self.color);
+    pub fn render_hub(&self, gl: &mut opengl_graphics::GlGraphics) {
+        self.hub.render_rect(gl, self.color);
     }
 }
 
@@ -98,9 +99,9 @@ impl SystemHubCollection {
         }
     }
 
-    pub fn render_systems(&self, render_state: &mut RenderState, args: &RenderArgs) {
+    pub fn render_systems(&self, gl: &mut opengl_graphics::GlGraphics) {
         for hub in self.systems.iter() {
-            hub.render_hub(render_state, args);
+            hub.render_hub(gl);
         }
     }
 }

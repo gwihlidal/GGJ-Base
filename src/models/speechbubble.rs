@@ -29,7 +29,7 @@ impl SpeechBubble {
 
     pub fn render_bubble(&self, render_state: &mut RenderState, args: &RenderArgs) {
         const WHITE:  [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        self.rect.render_rect(render_state,args,WHITE);
+        //self.rect.render_rect(render_state,args,WHITE);
     }
 
 
