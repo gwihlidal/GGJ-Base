@@ -12,7 +12,7 @@ void main()
     vec3 color1 = vec3(0.471, 0.62, 0.208);
     vec3 color2 = vec3(0.545, 0.18, 0.373);
     vec3 color = vec3(0.0);
-    vec2 off1 = vec2(1.5333333333333333);// * direction;
+    vec2 off1 = vec2(1.0333333333333333);// * direction;
     color += color0 * texture(t_color, v_uv).rgb * 0.29411764705882354;
     color += color1 * texture(t_color, v_uv + (off1 / resolution)).rgb * 0.35294117647058826;
     color += color2 * texture(t_color, v_uv - (off1 / resolution)).rgb * 0.35294117647058826;
