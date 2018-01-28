@@ -211,7 +211,7 @@ impl SystemHubCollection {
         let b = &self.systems[b_idx];
         let mut dist_right_up  = b.hub.position - a.hub.upper_right_corner();
         let mut dist_left_down = a.hub.position - b.hub.upper_right_corner();
-        
+
         let mut vertices: [Point; 3] = [Point::new(0.0,0.0), Point::new(0.0,0.0), Point::new(0.0,0.0)];
 
 
@@ -322,7 +322,7 @@ impl SystemHubCollection {
     pub fn get_game_over(&self)->bool
     {
         for hub in self.systems.iter() {
-            if (!hub.destroyed)
+            if !hub.destroyed
             {
                 return false;
             }

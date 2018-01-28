@@ -307,9 +307,9 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     //If all structures are destroyed, GAME OVER!
     if game_state.system_hubs.get_game_over()
     {
-        game_state.game_over = true; 
+        game_state.game_over = true;
     }
-    
+
     game_state.pigeon_timer += args.dt;
     game_state.system_hubs.update_systems(args);
 
@@ -592,14 +592,10 @@ fn render_hubs(
     if game_state.starting {
         return;
     }
+
     game_state.system_hubs.render_systems(render_state, args, game_state.pigeon_timer);
     for bubble in game_state.bubbles.iter() {
-      bubble.render_bubble(render_state, args);
-    }
-
-    game_state.system_hubs.render_systems(render_state, args);
-    for bubble in game_state.bubbles.iter() {
-            bubble.render_bubble(render_state, args);
+        bubble.render_bubble(render_state, args);
     }
 
     //Speech Bubble Text
