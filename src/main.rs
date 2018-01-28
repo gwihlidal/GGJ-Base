@@ -331,6 +331,15 @@ fn play_pigeon_sound()
     play_sound(&sound_file);
 }
 
+fn std_transform_0_to_1() -> Matrix2d {
+    use graphics::*;
+
+    let aspect = 16.0 / 9.0;
+    std_transform()
+    	.scale(aspect, 1.0)
+    	.trans(-1.0, -1.0).scale(2.0, 2.0)
+}
+
 fn render_irradiance(
     factory: &mut gfx_device_gl::Factory,
     assets: &Assets,
@@ -345,7 +354,7 @@ fn render_irradiance(
         &TextureSettings::new()
     ).unwrap();
 
-    let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
+    let scale_0_to_1 = std_transform_0_to_1();
     Image::new_color([1.0, 1.0, 1.0, 1.0]).draw(
         &sf_texture,
         &Default::default(),
@@ -510,11 +519,8 @@ fn render_radiation(render_state: &mut RenderState, sf: &ScalarField, time: f64)
 	const X_COUNT : usize = 16 * 2;
 	const Y_COUNT : usize = 9 * 2;
 
-    let transform = graphics::math::identity()
-        .trans(-1.0, -1.0)
-        .scale(2.0, 2.0)
-        .scale(1.0 / X_COUNT as f64, 1.0 / Y_COUNT as f64)
-        ;
+    let transform = std_transform_0_to_1()
+        .scale(1.0 / X_COUNT as f64, 1.0 / Y_COUNT as f64);
 
 	const X_BUF : usize = X_COUNT + 1;
 	const Y_BUF : usize = Y_COUNT + 1;
@@ -636,7 +642,7 @@ fn render_ui(
     render_state: &mut RenderState,
     args: &RenderArgs) {
         if game_state.game_over {
-            let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
+            let scale_0_to_1 = std_transform_0_to_1();
                     let gui_transform = scale_0_to_1
                         .flip_v()
                         .trans(0.0, -1.0)
