@@ -110,7 +110,9 @@ impl SystemHub {
                     hub: SelectableRect::new(position, size, ||{}) } // There is an empty closure! :3
     }
 
-    pub fn update_hub(&mut self, args: &UpdateArgs) {
+    pub fn update_hub(&mut self, args: &UpdateArgs) -> SystemUpdateStatus {
+        let mut result = SystemUpdateStatus::AllFine;
+
         if self.destroyed
         {
             self.color = [0.0,0.0,0.0,1.0];
@@ -127,8 +129,11 @@ impl SystemHub {
             if self.distress_level > 2.0
             {
                 self.destroyed = true;
+                result = SystemUpdateStatus::BigBadaBoom;
             }
         }
+
+        result
     }
 
     pub fn render_hubahuba(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
@@ -188,6 +193,11 @@ pub enum PigeonAcceptanceLevel {
 const CONNECTION_WIDTH : f32 = 0.005;
 const WHITE: [f32; 4] = [1.0f32, 1.0f32, 1.0f32, 1.0f32];
 
+pub enum SystemUpdateStatus {
+    AllFine,
+    BigBadaBoom,
+}
+
 impl SystemHubCollection {
     /// Create a set of SystemHubs
     pub fn new() -> SystemHubCollection {
@@ -198,10 +208,7 @@ impl SystemHubCollection {
 
     pub fn please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(&mut self, pos: Point) -> PigeonAcceptanceLevel {
         for hub in self.systems.iter_mut() {
-            if hub.destroyed {
-                return PigeonAcceptanceLevel::GetRekd;
-            }
-            if hub.hub.contains_point(pos) {
+            if !hub.destroyed && hub.hub.contains_point(pos) {
                 hub.distress_level = 0.0;
                 hub.distress_level_delta = DEFAULT_DISTRESS_LEVEL_DELTA;
                 return PigeonAcceptanceLevel::Adequate;
@@ -225,7 +232,7 @@ impl SystemHubCollection {
         let b = &self.systems[b_idx];
         let mut dist_right_up  = b.hub.position - a.hub.upper_right_corner();
         let mut dist_left_down = a.hub.position - b.hub.upper_right_corner();
-
+        
         let mut vertices: [Point; 3] = [Point::new(0.0,0.0), Point::new(0.0,0.0), Point::new(0.0,0.0)];
 
 
@@ -295,12 +302,18 @@ impl SystemHubCollection {
         self.obstacles.push(SelectableRect::new(pos, size, ||{}));
     }
 
-    pub fn update_systems(&mut self, args: &UpdateArgs) {
+    pub fn update_systems(&mut self, args: &UpdateArgs) -> SystemUpdateStatus {
+        let mut result = SystemUpdateStatus::AllFine;
+
         self.breaking_change += 0.0001 * args.dt as f32; // Double as hard after ~8min
         for hub in self.systems.iter_mut() {
             hub.distress_level_delta += rand::thread_rng().gen_range(0.0, self.breaking_change * hub.distress_level_delta);
-            hub.update_hub(args);
+            if let SystemUpdateStatus::BigBadaBoom = hub.update_hub(args) {
+                result = SystemUpdateStatus::BigBadaBoom;
         }
+    }
+
+        result
     }
 
     pub fn render_systems(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {

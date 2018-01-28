@@ -50,7 +50,7 @@ use graphics::math::Matrix2d;
 use models::pigeon::*;
 use models::coop::Coop;
 use models::speechbubble::SpeechBubble;
-use models::systemhub::{SystemHubCollection, PigeonAcceptanceLevel};
+use models::systemhub::*;
 use geometry::traits::Collide;
 
 gfx_defines!{
@@ -153,7 +153,7 @@ fn std_transform() -> Matrix2d {
 fn play_camera_shake() {
     unsafe {
         //if !SHAKE_ON {
-            SHAKE_RADIUS = 0.1;
+            SHAKE_RADIUS = 0.15;
             SHAKE_ANGLE = rand::thread_rng().gen_range(1.0, 360.0);
             SHAKE_IT = Point { x: SHAKE_ANGLE.sin() * SHAKE_RADIUS, y: SHAKE_ANGLE.cos() * SHAKE_RADIUS };
            SHAKE_ON = true;
@@ -262,11 +262,11 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     game_state.irradiance_field.decay(0.88f32.powf(args.dt as f32));
 
     // Fixed radiation source for the reactor or whatever
-    game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(-0.5f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
+    game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(-0.5f32, 0.5f32)), 4f32, RadiationBlendMode::Max);
 
     let mut pigeon_to_nuke = None;
     for i in 0..game_state.pigeons.len() {
-        let mut pigeon = &mut game_state.pigeons[i];
+    let mut pigeon = &mut game_state.pigeons[i];
         if PigeonStatus::ReachedDestination == pigeon.update((1.0 * args.dt) as f32)
            || game_state.system_hubs.pidgeon_crashing_into_wall(pigeon.vector.position) {
             pigeon_to_nuke = Some(i);
@@ -300,7 +300,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     for i in 0..len {
         if destroyed[i]
         {
-         game_state.irradiance_field.splat(pos_to_irradiance_coord(positions[i]), 7f32, RadiationBlendMode::Max);
+         game_state.irradiance_field.splat(pos_to_irradiance_coord(positions[i]), 7f32, RadiationBlendMode::Max);   
         }
     }
 
@@ -308,11 +308,13 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     //If all structures are destroyed, GAME OVER!
     if game_state.system_hubs.get_game_over()
     {
-        game_state.game_over = true;
+        game_state.game_over = true; 
     }
-
+    
     game_state.pigeon_timer += args.dt;
-    game_state.system_hubs.update_systems(args);
+    if let SystemUpdateStatus::BigBadaBoom = game_state.system_hubs.update_systems(args) {
+    	play_camera_shake();
+    }
 
     unsafe {
         if SHAKE_ON
@@ -322,7 +324,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
             }
 
             SHAKE_ANGLE += 180.0 - rand::thread_rng().gen_range(1.0, 60.0);
-            SHAKE_RADIUS *= 0.9;
+            SHAKE_RADIUS *= 0.95;
             SHAKE_IT = Point { x: SHAKE_ANGLE.sin() * SHAKE_RADIUS, y: SHAKE_ANGLE.cos() * SHAKE_RADIUS };
         }
     }
@@ -594,10 +596,10 @@ fn render_hubs(
         return;
     }
 
-    game_state.system_hubs.render_systems(render_state, args, game_state.pigeon_timer);
-    for bubble in game_state.bubbles.iter() {
-        bubble.render_bubble(render_state, args);
-    }
+        game_state.system_hubs.render_systems(render_state, args, game_state.pigeon_timer);
+        for bubble in game_state.bubbles.iter() {
+                bubble.render_bubble(render_state, args);
+        }
 
     //Speech Bubble Text
     /*for bubble in game_state.bubbles.iter() {
@@ -810,16 +812,16 @@ fn main() {
         // Update coop pigeon emission
         if let Some(Button::Mouse(button)) = e.press_args() {
             if !game_state.starting {
-                on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
-            }
+            on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+        }
         }
 
         if let Some(Button::Mouse(_)) = e.release_args() {
             if game_state.starting {
                 game_state.starting = false;
             } else {
-                on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
-            }
+            on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+        }
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
