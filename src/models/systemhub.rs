@@ -1,16 +1,22 @@
 extern crate graphics;
 extern crate rand;
+extern crate image;
+
 use rand::{Rng};
 use std::f32;
 use piston::input::RenderArgs;
 use geometry::{Point, Size};
 use models::selectable::SelectableRect;
 use RenderState;
+use Assets;
 use UpdateArgs;
 use std_transform;
 use play_pigeon_sound;
 use scalar_field::*;
-
+use std_transform_0_to_1;
+use graphics::ImageSize;
+use graphics::Transformed;
+use graphics::*;
 
 #[derive(Clone)]
 pub struct SystemHub {
@@ -172,6 +178,28 @@ impl SystemHub {
         render_box(self.hub.position, Point::new(size_x, size_y), render_state, pigeon_timer, args, self.distress_level);
     }
 
+    pub fn render_symbol(&self, assets: &Assets, render_state: &mut RenderState, args: &RenderArgs) {
+        let position = self.hub.position;
+
+        //let scale_0_to_1 = std_transform_0_to_1();
+        let gui_transform = std_transform()
+            //.flip_v()
+           // .trans(0.0, -1.0)
+
+            .trans(position.x as f64, position.y as f64)
+             .scale(0.1 / assets.radioactive.get_width() as f64, 0.1 / assets.radioactive.get_height() as f64)
+             .trans(16.0, 16.0);
+        Image::new_color([1.0, 1.0, 1.0, smoothstep(0.5, 1.0, self.distress_level)]).draw(&assets.radioactive, &render_state.c.draw_state, gui_transform, render_state.g);
+
+        /*let half_width = hub.size.width as f64 / 2.0;
+        let half_height = hub.size.height as f64 / 2.0;
+
+        let transform = std_transform()
+            .trans(hub.position.x as f64 + half_width, hub.position.y as f64 + half_height)
+            .scale(half_width, half_height);
+        graphics::rectangle([1.0, 1.0, 0.0, 1.0], rect, transform, render_state.g);*/
+    }
+
     pub fn reset_distress(&mut self, difficulty: f32) {
         self.distress_level_delta
             = rand::thread_rng().gen_range(DEFAULT_DISTRESS_LEVEL_DELTA * 0.5, DEFAULT_DISTRESS_LEVEL_DELTA + difficulty);
@@ -326,7 +354,7 @@ impl SystemHubCollection {
         result
     }
 
-    pub fn render_systems(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
+    pub fn render_systems(&self, assets: &Assets, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
         for hub in self.systems.iter() {
             hub.render_hubahuba(render_state, args, pigeon_timer);
         }
@@ -341,6 +369,10 @@ impl SystemHubCollection {
 
         for obst in self.obstacles.iter() {
             obst.render_rect(render_state, args, WHITE);
+        }
+
+        for hub in self.systems.iter() {
+            hub.render_symbol(assets, render_state, args);
         }
     }
 
