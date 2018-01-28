@@ -8,7 +8,7 @@ extern crate piston;
 extern crate graphics;
 extern crate gfx_graphics;
 extern crate find_folder;
-extern crate gfx;
+#[macro_use] extern crate gfx;
 extern crate gfx_device_gl;
 extern crate rodio;
 extern crate rand;
@@ -29,6 +29,8 @@ use graphics::draw_state::Blend;
 use graphics::*;
 use piston::input::*;
 use gfx_graphics::*;
+use gfx::{Device, VertexBuffer, RenderTarget};
+use gfx::traits::FactoryExt;
 
 mod scalar_field;
 use scalar_field::*;
@@ -50,11 +52,27 @@ use models::speechbubble::SpeechBubble;
 use models::systemhub::{SystemHubCollection, PigeonAcceptanceLevel};
 use geometry::traits::Collide;
 
+gfx_defines!{
+    vertex Vertex {
+        pos: [f32; 2] = "a_Pos",
+        color: [f32; 3] = "a_Color",
+    }
+
+    pipeline pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+        out: gfx::RenderTarget<Srgba8> = "Target0",
+    }
+}
+
+const TRI_VERTS: [Vertex; 3] = [
+	Vertex { pos: [-0.5, -0.5], color: [1.0, 0.0, 0.0] },
+	Vertex { pos: [0.5,  -0.5], color: [0.0, 1.0, 0.0] },
+	Vertex { pos: [0.0,   0.5], color: [0.0, 0.0, 1.0] },
+];
+
 pub struct RenderState<'a, 'b: 'a> {
     g: &'a mut GfxGraphics<'b, gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>,
     c: graphics::Context,
-     //window: &'a GlutinWindow
-     //g2d: &'a mut gfx_graphics::Gfx2d<gfx_device_gl::Resources>,
 }
 
 pub struct GameState {
@@ -457,7 +475,7 @@ fn main() {
         gfx_device_gl::create_main_targets_raw(dim,
                                                color_format.0,
                                                depth_format.0);
-    //let output_color = Typed::new(output_color);
+    let output_color = Typed::new(output_color);
     //let output_stencil = Typed::new(output_stencil);
 
     let (oscreen_tex, oscreen_srv, oscreen_rtv) = factory.create_render_target::<Srgba8>(
@@ -475,6 +493,19 @@ fn main() {
     ) -> Result<(Texture<R, T::Surface>, ShaderResourceView<R, T::View>, RenderTargetView<R, T>), CombinedError> { ... }
 
 */
+
+    let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&TRI_VERTS, ());
+
+	let pso = factory.create_pipeline_simple(
+		include_bytes!("../assets/Yasqueen.glslv"),
+		include_bytes!("../assets/Yasqueen.glslf"),
+		pipe::new()).unwrap();
+
+	let mut data = pipe::Data {
+		vbuf: vertex_buffer,
+		out: output_color,
+	};
+
     let mut encoder = factory.create_command_buffer().into();
     let mut g2d = Gfx2d::new(opengl, &mut factory);
 
@@ -532,6 +563,32 @@ fn main() {
                     &DrawState::default(),
                     render_state.c.transform.trans(10.0, 100.0), render_state.g).unwrap();
             });
+
+            /*let img_info = ImageInfoCommon {
+                xoffset: 0,
+                yoffset: 0,
+                zoffset: 0,
+                width: draw_size.width,
+                height: draw_size.height,
+                depth: 1,
+                format: Srgba8,
+                mipmap: 0 };
+
+            let copy_src = TextureCopyRegion {
+                texture: oscreen_tex,
+                kind: Kind::D2,
+                None,
+                info: img_info };
+
+            let copy_dst = TextureCopyRegion {
+                texture: output_color,
+                kind: Kind::D2,
+                None,
+                info: img_info };
+
+            encoder.copy_texture_to_texture()*/
+            encoder.clear(&data.out, [1.0, 0.0, 0.0, 1.0]);
+            encoder.draw(&slice, &pso, &data);
             encoder.flush(&mut device);
         }
 
