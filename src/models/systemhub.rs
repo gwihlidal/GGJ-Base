@@ -8,6 +8,7 @@ use models::selectable::SelectableRect;
 use RenderState;
 use UpdateArgs;
 use std_transform;
+use scalar_field::*;
 
 
 #[derive(Clone)]
@@ -26,6 +27,74 @@ pub struct SystemHub {
     pub destroyed: bool,
     //Poisition of the center of the square
     pub center: Point
+}
+
+fn render_box(
+    pos: Point, size: Point,
+    render_state: &mut RenderState,
+    pigeon_timer: f32,
+    args: &RenderArgs,
+    distress_level: f32) {
+
+    use geometry::traits::Position;
+    use gfx_graphics::*;
+    use graphics::*;
+
+    let mut verts : Vec<Point> = Vec::new();
+
+    {
+        let mut make_edge = |a: Point, b: Point| {
+            let pts : i32 = 4;
+            for i in 0..pts {
+                let mut p : Point = a.lerp(&b, (i as f32) / (pts as f32));
+                let derp = p;
+                let ampl_t = ((derp.x + derp.y + pigeon_timer as f32 * 1f32) * 4f32).sin();
+
+                let d = smoothstep(0.0f32, 0.5f32, distress_level);
+
+                let ampl = smoothstep(0.7, 1.0, ampl_t);
+                let ampl = d * (ampl + 0.6f32) * 0.007f32;
+
+                let ampl2 = smoothstep(0.5, 1.0, ampl_t);
+                let ampl2 = d * ampl2 * 0.01f32;
+
+                p.x += (derp.y * 100f32 + pigeon_timer as f32 * 63f32).sin() as f32 * ampl;
+                p.y += (derp.x * 100f32 + pigeon_timer as f32 * 71f32).sin() as f32 * ampl;
+
+                p.x += (derp.y * 23f32 + pigeon_timer as f32 * 23f32).sin() as f32 * ampl2;
+                p.y += (derp.x * 21f32 + pigeon_timer as f32 * 21f32).sin() as f32 * ampl2;
+
+                p.x += (derp.y * 13f32 + pigeon_timer as f32 * 63f32).sin() as f32 * 0.004f32 * d;
+                p.y += (derp.x *  7f32 + pigeon_timer as f32 * 51f32).sin() as f32 * 0.004f32 * d;
+
+                verts.push(p);
+            }
+        };
+
+        {
+            let v0 = pos;
+            let v1 = pos + Point::new(size.x, 0f32);
+            let v2 = pos + Point::new(size.x, size.y);
+            let v3 = pos + Point::new(0f32, size.y);
+            make_edge(v0, v1);
+            make_edge(v1, v2);
+            make_edge(v2, v3);
+            make_edge(v3, v0);
+        }
+    }
+
+    let transform = std_transform();
+    let mut prev = verts[verts.len() - 1];
+    for i in 0..verts.len() {
+        Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.003).draw([
+                prev.x as f64,
+                prev.y as f64,
+                verts[i].x as f64,
+                verts[i].y as f64,
+        ], &render_state.c.draw_state, transform, render_state.g);
+
+        prev = verts[i];
+    }
 }
 
 const DEFAULT_DISTRESS_LEVEL_DELTA : f32 = 0.002;
@@ -61,8 +130,40 @@ impl SystemHub {
         }
     }
 
-    pub fn render_hub(&self, render_state: &mut RenderState, args: &RenderArgs) {
-        self.hub.render_rect(render_state, args, self.color);
+    pub fn render_hubahuba(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
+        use graphics::*;
+        let hub = &self.hub;
+
+        let color = [
+            1f32,
+            smoothstep(1f32, 0f32, self.distress_level),
+            smoothstep(1f32, 0f32, self.distress_level),
+            0.05f32 + 0.1f32 * smoothstep(0f32, 1f32, self.distress_level)
+        ];
+
+        let tscale = (hub.position.x.sin() * 0.2 + 1.0) as f64;
+        let tscale = tscale * (1.0f64 + self.distress_level.min(1.0f32) as f64 * 10.0f64);
+
+        let t = pigeon_timer * tscale;
+        let derp = ((t * 1.235 + hub.position.x as f64).sin() * 0.5f64 + 0.5f64) as f64;
+        let herp = ((t * 1.735 + hub.position.y as f64).sin() * 0.5f64 + 0.5f64) as f64;
+        let rects = [
+            [0.2 * ((t + hub.position.y as f64).sin() * 0.5 + 0.5) as f64, 0.0, 0.7, 1.0],
+            [0.0, 0.1 + 0.1 * ((t * 1.3 + hub.position.x as f64).sin() * 0.5 + 0.5), 1.0, 0.5],
+            [herp * 0.3, derp * 0.3, 0.7, 0.7],
+        ];
+
+        for &rect in rects.iter() {
+            let transform = std_transform()
+                .trans(hub.position.x as f64, hub.position.y as f64)
+                .scale(hub.size.width as f64, hub.size.height as f64);
+            graphics::rectangle(color, rect, transform, render_state.g);
+        }
+    }
+
+    pub fn render_hub(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f32) {
+        let Size { width: size_x, height: size_y } = self.hub.size;
+        render_box(self.hub.position, Point::new(size_x, size_y), render_state, pigeon_timer, args, self.distress_level);
     }
 }
 
@@ -183,9 +284,13 @@ impl SystemHubCollection {
         }
     }
 
-    pub fn render_systems(&self, render_state: &mut RenderState, args: &RenderArgs) {
+    pub fn render_systems(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
         for hub in self.systems.iter() {
-            hub.render_hub(render_state, args);
+            hub.render_hubahuba(render_state, args, pigeon_timer);
+        }
+
+        for hub in self.systems.iter() {
+            hub.render_hub(render_state, args, pigeon_timer as f32);
         }
 
         for conn in self.connections.iter() {

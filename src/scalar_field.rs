@@ -72,7 +72,7 @@ impl ScalarField {
 	pub fn to_image_buffer(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
 		let mut res = vec![0u8; (self.width * self.height * 4) as usize];
 		for i in 0..self.width * self.height {
-			let bg = 24u8;
+			let bg = 36u8;
 			let fg_r = (162 - bg) as f32;
 			let fg_g = (197 - bg) as f32;
 			let fg_b = (99 - bg) as f32;
