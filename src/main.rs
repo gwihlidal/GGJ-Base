@@ -266,8 +266,9 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
 
     let mut pigeon_to_nuke = None;
     for i in 0..game_state.pigeons.len() {
-    let mut pigeon = &mut game_state.pigeons[i];
-        if let PigeonStatus::ReachedDestination = pigeon.update((1.0 * args.dt) as f32) {
+        let mut pigeon = &mut game_state.pigeons[i];
+        if PigeonStatus::ReachedDestination == pigeon.update((1.0 * args.dt) as f32)
+           || game_state.system_hubs.pidgeon_crashing_into_wall(pigeon.vector.position) {
             pigeon_to_nuke = Some(i);
         }
     }

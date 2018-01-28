@@ -14,6 +14,7 @@ pub struct Pigeon {
     trajectory_pos: usize,
 }
 
+#[derive(PartialEq)]
 pub enum PigeonStatus {
     JustPigeoning,
     ReachedDestination,

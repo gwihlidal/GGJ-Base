@@ -8,6 +8,7 @@ use models::selectable::SelectableRect;
 use RenderState;
 use UpdateArgs;
 use std_transform;
+use play_pigeon_sound;
 use scalar_field::*;
 
 
@@ -173,6 +174,8 @@ pub struct SystemHubCollection {
     systems: Vec<SystemHub>,
     /// All connections
     connections: Vec<(SystemConnection,usize,usize)>,
+    /// Obstacles
+    obstacles: Vec<SelectableRect>,
     /// Rate of change, might increase over time to make it challenging
     breaking_change: f32
 }
@@ -183,17 +186,19 @@ pub enum PigeonAcceptanceLevel {
 }
 
 const CONNECTION_WIDTH : f32 = 0.005;
+const WHITE: [f32; 4] = [1.0f32, 1.0f32, 1.0f32, 1.0f32];
 
 impl SystemHubCollection {
     /// Create a set of SystemHubs
     pub fn new() -> SystemHubCollection {
 
-        SystemHubCollection { systems: Vec::new(), connections: Vec::new(), breaking_change: 0.005 }
+        SystemHubCollection { systems: Vec::new(), connections: Vec::new(), obstacles: Vec::new(),
+                              breaking_change: 0.005 }
     }
 
     pub fn please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(&mut self, pos: Point) -> PigeonAcceptanceLevel {
         for hub in self.systems.iter_mut() {
-            if hub.destroyed{
+            if hub.destroyed {
                 return PigeonAcceptanceLevel::GetRekd;
             }
             if hub.hub.contains_point(pos) {
@@ -204,6 +209,15 @@ impl SystemHubCollection {
         }
 
         PigeonAcceptanceLevel::GetRekd
+    }
+
+    pub fn pidgeon_crashing_into_wall(&self, old_style_pidgeon_pos: Point) -> bool {
+        for obst in self.obstacles.iter() {
+            if obst.contains_point(old_style_pidgeon_pos) {
+                return true;
+            }
+        }
+        false
     }
 
     fn add_connection(&mut self, a_idx: usize, b_idx: usize, num_conns_a: i32, num_conns_b: i32) {
@@ -252,11 +266,11 @@ impl SystemHubCollection {
     }
 
     pub fn init(&mut self) {
-        let pos = Point::new(0.0, 0.0);
+        let pos = Point::new(0.2, 0.0);
         let size = Size::new(0.4, 0.2);
         self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
 
-        let pos = Point::new(0.6, 0.3);
+        let pos = Point::new(0.8, 0.3);
         let size = Size::new(0.4, 0.3);
         self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
 
@@ -274,6 +288,11 @@ impl SystemHubCollection {
         self.add_connection(0, 3, 2, 0);
         self.add_connection(1, 3, 1, 1);
         self.add_connection(2, 1, 1, 2);
+
+        // Add obstacles
+        let pos = Point::new(-0.1, -0.3);
+        let size = Size::new(0.9, 0.1);
+        self.obstacles.push(SelectableRect::new(pos, size, ||{}));
     }
 
     pub fn update_systems(&mut self, args: &UpdateArgs) {
@@ -295,6 +314,10 @@ impl SystemHubCollection {
 
         for conn in self.connections.iter() {
             conn.0.render_connection(render_state, args);
+        }
+
+        for obst in self.obstacles.iter() {
+            obst.render_rect(render_state, args, WHITE);
         }
     }
 
@@ -349,7 +372,6 @@ impl SystemConnection {
     pub fn render_connection(&self, render_state: &mut RenderState, args: &RenderArgs) {
         use graphics::*;
 
-        const WHITE: [f32; 4] = [1.0f32, 1.0f32, 1.0f32, 1.0f32];
         let transform = std_transform();
 
         Line::new(WHITE, CONNECTION_WIDTH as f64).draw([
