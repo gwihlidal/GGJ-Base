@@ -72,13 +72,13 @@ impl ScalarField {
 	pub fn to_image_buffer(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
 		let mut res = vec![0u8; (self.width * self.height * 4) as usize];
 		for i in 0..self.width * self.height {
-			let bg = 4u8;
+			let bg = 24u8;
 			let fg_r = (162 - bg) as f32;
 			let fg_g = (197 - bg) as f32;
 			let fg_b = (99 - bg) as f32;
-			res[i * 4 + 0] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.3f32 * fg_r) as u8;
-			res[i * 4 + 1] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.3f32 * fg_g) as u8;
-			res[i * 4 + 2] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.3f32 * fg_b) as u8;
+			res[i * 4 + 0] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.6f32 * fg_r) as u8;
+			res[i * 4 + 1] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.6f32 * fg_g) as u8;
+			res[i * 4 + 2] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.6f32 * fg_b) as u8;
 			//res[i * 4 + 1] = bg + (smoothstep(0.0, 0.5, self.values[i]) * 0.8f32 * 220f32) as u8;
 			//res[i * 4 + 1] = res[i * 4 + 0];
 			//res[i * 4 + 2] = res[i * 4 + 0];

@@ -4,10 +4,11 @@ use geometry::{Point,Size};
 
 use piston::input::RenderArgs;
 use RenderState;
+use graphics::Transformed;
 
 #[derive(Clone)]
 pub struct SpeechBubble {
-    pub rect: SelectableRect, 
+    pub rect: SelectableRect,
     pub tip_pos: Point
 }
 
@@ -29,7 +30,7 @@ impl SpeechBubble {
 
     pub fn render_bubble(&self, render_state: &mut RenderState, args: &RenderArgs) {
         const WHITE:  [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        //self.rect.render_rect(render_state,args,WHITE);
+        self.rect.render_rect(render_state,args,WHITE);
     }
 
 
@@ -40,5 +41,8 @@ impl SpeechBubble {
     }
     pub fn get_point(&self) -> &Point{
         return &self.rect.position;
+    }
+    pub fn get_height(&self) -> &f32{
+        return &self.rect.size.height;
     }
 }
