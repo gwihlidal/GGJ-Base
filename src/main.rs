@@ -54,20 +54,24 @@ use geometry::traits::Collide;
 
 gfx_defines!{
     vertex Vertex {
-        pos: [f32; 2] = "a_Pos",
-        color: [f32; 3] = "a_Color",
+        pos: [f32; 2] = "a_pos",
+        uv: [f32; 2] = "a_uv",
     }
 
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
+        tex: gfx::TextureSampler<[f32; 4]> = "t_color",
         out: gfx::RenderTarget<Srgba8> = "Target0",
     }
 }
 
-const TRI_VERTS: [Vertex; 3] = [
-	Vertex { pos: [-0.5, -0.5], color: [1.0, 0.0, 0.0] },
-	Vertex { pos: [0.5,  -0.5], color: [0.0, 1.0, 0.0] },
-	Vertex { pos: [0.0,   0.5], color: [0.0, 0.0, 1.0] },
+const QUAD_VERTS: [Vertex; 6] = [
+	Vertex { pos: [-1.0, -1.0], uv: [0.0, 0.0] }, // Bottom Left
+	Vertex { pos: [ 1.0, -1.0], uv: [1.0, 0.0] }, // Bottom Right
+	Vertex { pos: [-1.0,  1.0], uv: [0.0, 1.0] }, // Top Left
+    Vertex { pos: [-1.0,  1.0], uv: [0.0, 1.0] }, // Top Left
+	Vertex { pos: [ 1.0, -1.0], uv: [1.0, 0.0] }, // Bottom Right
+	Vertex { pos: [ 1.0,  1.0], uv: [1.0, 1.0] }, // Top Right
 ];
 
 pub struct RenderState<'a, 'b: 'a> {
@@ -486,23 +490,20 @@ fn main() {
         draw_size.width as u16,
         draw_size.height as u16).unwrap();
 
-    /*fn create_render_target<T: RenderFormat + TextureFormat>(
-        &mut self,
-        width: Size,
-        height: Size
-    ) -> Result<(Texture<R, T::Surface>, ShaderResourceView<R, T::View>, RenderTargetView<R, T>), CombinedError> { ... }
-
-*/
-
-    let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&TRI_VERTS, ());
+    let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&QUAD_VERTS, ());
 
 	let pso = factory.create_pipeline_simple(
 		include_bytes!("../assets/Yasqueen.glslv"),
 		include_bytes!("../assets/Yasqueen.glslf"),
 		pipe::new()).unwrap();
 
+    let sinfo = gfx::texture::SamplerInfo::new(
+        gfx::texture::FilterMethod::Bilinear,
+        gfx::texture::WrapMode::Clamp);
+
 	let mut data = pipe::Data {
 		vbuf: vertex_buffer,
+        tex: (oscreen_srv, factory.create_sampler(sinfo)),
 		out: output_color,
 	};
 
@@ -547,7 +548,6 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
-            //g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
             g2d.draw(&mut encoder, &oscreen_rtv, &oscreen2_dsv, args.viewport(), |c, g| {
                 let mut render_state = RenderState { g, c };
                 clear([0.0, 0.0, 0.0, 1.0], render_state.g);
@@ -564,29 +564,6 @@ fn main() {
                     render_state.c.transform.trans(10.0, 100.0), render_state.g).unwrap();
             });
 
-            /*let img_info = ImageInfoCommon {
-                xoffset: 0,
-                yoffset: 0,
-                zoffset: 0,
-                width: draw_size.width,
-                height: draw_size.height,
-                depth: 1,
-                format: Srgba8,
-                mipmap: 0 };
-
-            let copy_src = TextureCopyRegion {
-                texture: oscreen_tex,
-                kind: Kind::D2,
-                None,
-                info: img_info };
-
-            let copy_dst = TextureCopyRegion {
-                texture: output_color,
-                kind: Kind::D2,
-                None,
-                info: img_info };
-
-            encoder.copy_texture_to_texture()*/
             encoder.clear(&data.out, [1.0, 0.0, 0.0, 1.0]);
             encoder.draw(&slice, &pso, &data);
             encoder.flush(&mut device);
@@ -629,12 +606,12 @@ fn main() {
             on_mouse_move(&mut game_state, [cursor.x as f64, cursor.y as f64]);
         });
 
-        e.text(|text| {
-            println!("Typed '{}'", text)
+        e.text(|_text| {
+            //println!("Typed '{}'", text)
         });
 
-        e.resize(|w, h| {
-            println!("Resized '{}, {}'", w, h)
+        e.resize(|_w, _h| {
+            //println!("Resized '{}, {}'", w, h)
         });
     }
 }
