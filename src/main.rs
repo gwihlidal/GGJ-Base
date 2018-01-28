@@ -570,7 +570,7 @@ fn render_hubs(
         return;
     }
 
-    game_state.system_hubs.render_systems(assets, render_state, args, game_state.pigeon_timer);
+    game_state.system_hubs.render_systems(assets, game_state, render_state, args, game_state.pigeon_timer);
     for bubble in game_state.bubbles.iter() {
             bubble.render_bubble(render_state, args);
     }

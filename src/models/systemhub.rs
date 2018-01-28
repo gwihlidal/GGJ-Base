@@ -8,6 +8,7 @@ use piston::input::RenderArgs;
 use geometry::{Point, Size};
 use models::selectable::SelectableRect;
 use RenderState;
+use GameState;
 use Assets;
 use UpdateArgs;
 use std_transform;
@@ -37,7 +38,10 @@ pub struct SystemHub {
 }
 
 fn render_box(
-    pos: Point, size: Point,
+    box_color: [f32; 4],
+    pos: Point,
+    size: Point,
+    game_state: &GameState,
     render_state: &mut RenderState,
     pigeon_timer: f32,
     args: &RenderArgs,
@@ -93,7 +97,7 @@ fn render_box(
     let transform = std_transform();
     let mut prev = verts[verts.len() - 1];
     for i in 0..verts.len() {
-        Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.003).draw([
+        Line::new(box_color, 0.003).draw([
                 prev.x as f64,
                 prev.y as f64,
                 verts[i].x as f64,
@@ -173,9 +177,25 @@ impl SystemHub {
         }
     }
 
-    pub fn render_hub(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f32) {
+    pub fn render_hub(&self, game_state: &GameState, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f32) {
         let Size { width: size_x, height: size_y } = self.hub.size;
-        render_box(self.hub.position, Point::new(size_x, size_y), render_state, pigeon_timer, args, self.distress_level);
+        let mut in_bounds = false;
+        let aim_valid = game_state.aim_trajectory.points.len() > 0;
+        if aim_valid {
+            let aim_pos: Point = *game_state.aim_trajectory.points.last().unwrap();
+            if self.hub.contains_point(aim_pos) {
+                in_bounds = true;
+            }
+        }
+
+        let tom_sucks: bool = in_bounds;
+        let tom_color = if tom_sucks {
+            [0.2, 0.9, 0.0, 1.0]
+        } else {
+            // Tom still sucks
+            [1.0, 1.0, 1.0, 1.0]
+        };
+        render_box(tom_color, self.hub.position, Point::new(size_x, size_y), game_state, render_state, pigeon_timer, args, self.distress_level);
     }
 
     pub fn render_symbol(&self, assets: &Assets, render_state: &mut RenderState, args: &RenderArgs) {
@@ -266,7 +286,7 @@ impl SystemHubCollection {
         let b = &self.systems[b_idx];
         let mut dist_right_up  = b.hub.position - a.hub.upper_right_corner();
         let mut dist_left_down = a.hub.position - b.hub.upper_right_corner();
-        
+
         let mut vertices: [Point; 3] = [Point::new(0.0,0.0), Point::new(0.0,0.0), Point::new(0.0,0.0)];
 
 
@@ -354,13 +374,13 @@ impl SystemHubCollection {
         result
     }
 
-    pub fn render_systems(&self, assets: &Assets, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
+    pub fn render_systems(&self, assets: &Assets, game_state: &GameState, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
         for hub in self.systems.iter() {
             hub.render_hubahuba(render_state, args, pigeon_timer);
         }
 
         for hub in self.systems.iter() {
-            hub.render_hub(render_state, args, pigeon_timer as f32);
+            hub.render_hub(game_state, render_state, args, pigeon_timer as f32);
         }
 
         for conn in self.connections.iter() {
