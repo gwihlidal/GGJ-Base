@@ -73,11 +73,15 @@ impl ScalarField {
 		let mut res = vec![0u8; (self.width * self.height * 4) as usize];
 		for i in 0..self.width * self.height {
 			let bg = 4u8;
-			let fg = (255 - bg) as f32;
-			res[i * 4 + 0] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.8f32 * fg) as u8;
+			let fg_r = (162 - bg) as f32;
+			let fg_g = (197 - bg) as f32;
+			let fg_b = (99 - bg) as f32;
+			res[i * 4 + 0] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.3f32 * fg_r) as u8;
+			res[i * 4 + 1] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.3f32 * fg_g) as u8;
+			res[i * 4 + 2] = bg + (smoothstep(0.0, 1.0, self.values[i]) * 0.3f32 * fg_b) as u8;
 			//res[i * 4 + 1] = bg + (smoothstep(0.0, 0.5, self.values[i]) * 0.8f32 * 220f32) as u8;
-			res[i * 4 + 1] = res[i * 4 + 0];
-			res[i * 4 + 2] = res[i * 4 + 0];
+			//res[i * 4 + 1] = res[i * 4 + 0];
+			//res[i * 4 + 2] = res[i * 4 + 0];
 			res[i * 4 + 3] = 255u8;
 		}
 		ImageBuffer::from_raw(self.width as u32, self.height as u32, res).unwrap()
@@ -107,4 +111,30 @@ impl ScalarField {
 
 		Point::new(h00 - h01, h00 - h10)
 	}
+
+	pub fn sample(&self, p: Point) -> f32 {
+		let Point { x, y } = p;
+
+        let x0 = (x * self.width as f32 - 0.5f32).max(0f32);
+        let y0 = (y * self.height as f32 - 0.5f32).max(0f32);
+
+        let x0i = (x0 as usize).min(self.width-1);
+        let y0i = (y0 as usize).min(self.height-1);
+        let x1i = (x0i+1).min(self.width-1);
+        let y1i = (y0i+1).min(self.height-1);
+
+        let tx = x0 - x0i as f32;
+        let ty = y0 - y0i as f32;
+
+        let h00 = self.values[y0i * self.width + x0i];
+        let h01 = self.values[y0i * self.width + x1i];
+        let h10 = self.values[y1i * self.width + x0i];
+        let h11 = self.values[y1i * self.width + x1i];
+
+        let h0 = (1f32 - tx) * h00 + tx * h01;
+        let h1 = (1f32 - tx) * h10 + tx * h11;
+        let h = (1f32 - ty) * h1 + ty * h0;
+
+        h
+    }
 }

@@ -1,4 +1,4 @@
-use geometry::{Advance, Collide, Point, Vector};
+use geometry::{Collide, Point, Vector};
 use super::Pigeon;
 
 #[derive(Clone)]

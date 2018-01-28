@@ -110,7 +110,7 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 
 impl<'a> Game<'a> {
     fn new(glyphs: GlyphCache<'a>) -> Game<'a> {
-		let mut sf = ScalarField::new(16 * 4, 9 * 4);
+		let sf = ScalarField::new(16 * 4, 9 * 4);
 
         Game {
             render_state: RenderState { gl: GlGraphics::new(OpenGL::V3_2) },
@@ -145,7 +145,7 @@ impl<'a> Game<'a> {
         self.game_state.system_hubs.init();
 
         let pos_bubble = geometry::Point::new(0.2, 0.5);
-        self.game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.1,0.2), pigeon_sound,pos_bubble));
+        //self.game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.1,0.2), pigeon_sound,pos_bubble));
 
         // Pigeon animation frame #0
         self.assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
@@ -244,7 +244,7 @@ impl<'a> Game<'a> {
 
         const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
         render_state.gl.draw(args.viewport(), |_c, gl| {
-            let square = graphics::rectangle::square(0.0, 0.0, 0.1);
+            //let square = graphics::rectangle::square(0.0, 0.0, 0.1);
             let rotation = pigeon.vector.direction as f64;
 
             //let (x, y) = ((args.width  / 2) as f64,
@@ -274,11 +274,92 @@ impl<'a> Game<'a> {
         });
     }
 
+    const MARCHING_SQUARES_SOLID: &'static [&'static [&'static [[f64; 2]]]] = &[
+    	&[&[]],	// 0000
+    	&[&[ [0f64, 0f64], [1f64, 0f64], [0f64, 1f64] ]],	// 0001
+    	&[&[ [1f64, 0f64], [2f64, 0f64], [2f64, 1f64] ]],	// 0010
+    	&[&[ [0f64, 0f64], [2f64, 0f64], [2f64, 1f64], [0f64, 1f64]]],	// 0011
+    	&[&[ [2f64, 1f64], [2f64, 2f64], [1f64, 2f64] ]],	// 0100
+    	&[&[ [2f64, 1f64], [2f64, 2f64], [1f64, 2f64] ], &[ [0f64, 0f64], [1f64, 0f64], [0f64, 1f64] ]],	// 0101
+    	&[&[ [1f64, 0f64], [2f64, 0f64], [2f64, 2f64], [1f64, 2f64] ]],	// 0110
+    	&[&[ [0f64, 0f64], [2f64, 0f64], [2f64, 2f64], [1f64, 2f64], [0f64, 1f64] ]],	// 0111
+    	&[&[ [0f64, 1f64], [1f64, 2f64], [0f64, 2f64] ]],	// 1000
+    	&[&[ [0f64, 0f64], [1f64, 0f64], [1f64, 2f64], [0f64, 2f64] ]],	// 1001
+    	&[&[ [0f64, 1f64], [1f64, 2f64], [0f64, 2f64] ], &[ [1f64, 0f64], [2f64, 0f64], [2f64, 1f64] ]],	// 1010
+    	&[&[ [0f64, 0f64], [2f64, 0f64], [2f64, 1f64], [1f64, 2f64], [0f64, 2f64] ]],	// 1011
+    	&[&[ [0f64, 1f64], [2f64, 1f64], [2f64, 2f64], [0f64, 2f64] ]],	// 1100
+    	&[&[ [0f64, 0f64], [1f64, 0f64], [2f64, 1f64], [2f64, 2f64], [0f64, 2f64] ]],	// 1101
+    	&[&[ [1f64, 0f64], [2f64, 0f64], [2f64, 2f64], [0f64, 2f64], [0f64, 1f64] ]],	// 1110
+    	&[&[ [0f64, 0f64], [2f64, 0f64], [2f64, 2f64], [0f64, 2f64] ]],	// 1111
+    ];
+
+    fn render_radiation(gl: &mut opengl_graphics::GlGraphics, sf: &ScalarField, time: f64) {
+    	use graphics::*;
+
+    	const X_COUNT : usize = 16 * 2;
+    	const Y_COUNT : usize = 9 * 2;
+
+        let transform = graphics::math::identity()
+            .trans(-1.0, -1.0)
+            .scale(2.0, 2.0)
+            .scale(1.0 / X_COUNT as f64, 1.0 / Y_COUNT as f64)
+            ;
+
+    	const X_BUF : usize = X_COUNT + 1;
+    	const Y_BUF : usize = Y_COUNT + 1;
+        let mut h_samples = [0f32; X_BUF * Y_BUF];
+
+    	for y in 0..Y_BUF {
+    		let y0 = y as f32 / Y_COUNT as f32;
+        	for x in 0..X_BUF {
+        		let x0 = x as f32 / X_COUNT as f32;
+        		h_samples[X_BUF * y + x] = sf.sample(Point::new(x0, y0));
+        	}
+        }
+
+        let mut draw = |th, col| {
+	    	for y in 0..Y_COUNT {
+	        	for x in 0..X_COUNT {
+	        		let h0 = h_samples[(y+0) * X_BUF + (x+0)];
+	        		let h1 = h_samples[(y+0) * X_BUF + (x+1)];
+	        		let h2 = h_samples[(y+1) * X_BUF + (x+1)];
+	        		let h3 = h_samples[(y+1) * X_BUF + (x+0)];
+
+	        		let h0 = if h0 > th { 1 } else { 0 };
+	        		let h1 = if h1 > th { 1 } else { 0 };
+	        		let h2 = if h2 > th { 1 } else { 0 };
+	        		let h3 = if h3 > th { 1 } else { 0 };
+
+	        		let polys = Self::MARCHING_SQUARES_SOLID[h0 + 2 * h1 + 4 * h2 + 8 * h3];
+	        		for poly in polys.iter() {
+			            let transform = transform.trans(x as f64, y as f64).scale(0.5, 0.5);
+	        			//graphics::polygon(col, &poly[..], transform, gl);
+
+	        			let mut p : Vec<[f64; 2]> = Vec::new();
+	        			for v in poly.iter() {
+	        				p.push(*v);
+	        			}
+
+	        			for i in 0..p.len() {
+	        				p[i][0] += (p[i][1] * 0.5 + y as f64 + time * 2.0).sin() * 0.25;
+	        			}
+	        			graphics::polygon(col, &p[..], transform, gl);
+	        		}
+	        	}
+	       	}
+	    };
+
+	    let col = [0.635, 0.773, 0.388, 0.15];
+	    draw(0.2f32, col);
+	    draw(0.5f32, col);
+	    //draw(0.8f32, col);
+    }
+
     fn render_coop(render_state: &mut RenderState, args: &RenderArgs, _coop: &Coop) {
         use graphics::*;
         use geometry::traits::Position;
 
-        const color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+        const COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         use graphics::math::Vec2d;
 
         render_state.gl.draw(args.viewport(), |_c, gl| {
@@ -293,7 +374,7 @@ impl<'a> Game<'a> {
                 transform = transform.rot_rad(dir as f64);
             }
 
-            graphics::polygon(color, &pentagon, transform, gl);
+            graphics::polygon(COLOR, &pentagon, transform, gl);
         });
     }
 
@@ -339,6 +420,8 @@ impl<'a> Game<'a> {
 			    gl
 			);
 
+			Self::render_radiation(gl, &game_state.irradiance_field, game_state.pigeon_timer);
+
             // Test line rendering
             // Line::new([1.0, 1.0, 1.0, 1.0], 0.001).draw([0f64, 0f64, 1f64, 1f64], &Default::default(), scale_0_to_1, gl);
 
@@ -374,7 +457,7 @@ impl<'a> Game<'a> {
                 bubble.render_bubble(render_state, args);
         }
 
-        render_state.gl.draw(args.viewport(), |c, gl| {
+        render_state.gl.draw(args.viewport(), |_, gl| {
             for bubble in game_state.bubbles.iter() {
                 let s = bubble.get_text();
                 let ss: &str = &s;
@@ -410,7 +493,7 @@ impl<'a> Game<'a> {
 //            Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
 //        }
 
-        let mut coop = &mut self.game_state.coops[0];
+        let coop = &mut self.game_state.coops[0];
         Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
 
         for bubble in self.game_state.bubbles.iter_mut() {
@@ -428,7 +511,7 @@ impl<'a> Game<'a> {
 //        }
 
 		let coop_idx = 0;
-    	let mut coop = &mut self.game_state.coops[coop_idx];
+    	let coop = &mut self.game_state.coops[coop_idx];
     	let fake_click = coop.position;
         if Coop::update_mouse_click(coop, fake_click) {
         	self.game_state.selected_coop = Some(coop_idx);
@@ -479,6 +562,7 @@ fn main() {
 
 	let mut cursor = Point::new(0f32, 0f32);
     let glyph_cache = GlyphCache::new("assets/FiraSans-Regular.ttf", (), TextureSettings::new()).unwrap();
+
     let mut game = Game::new(glyph_cache);
     game.on_load(&window);
 
@@ -495,7 +579,7 @@ fn main() {
         }
 
         // Update coop pigeon emission
-        if let Some(Button::Mouse(button)) = e.press_args(){
+        if let Some(Button::Mouse(_button)) = e.press_args(){
             game.on_mouse_click([cursor.x as f64, cursor.y as f64]);
 
             /*if button == MouseButton::Left {

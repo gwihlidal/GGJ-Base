@@ -1,4 +1,4 @@
-use geometry::{Advance, Collide, Vector};
+use geometry::{Collide, Vector};
 use geometry::point::{Point};
 use std::f32;
 
