@@ -246,6 +246,7 @@ pub enum PigeonAcceptanceLevel {
 
 const CONNECTION_WIDTH : f32 = 0.005;
 const WHITE: [f32; 4] = [1.0f32, 1.0f32, 1.0f32, 1.0f32];
+const CONNECTION_THROUGHPUT: f32 = 0.05;
 
 pub enum SystemUpdateStatus {
     AllFine,
@@ -326,42 +327,92 @@ impl SystemHubCollection {
         self.connections.push((SystemConnection::new(vertices[0], vertices[1], vertices[2]), a_idx, b_idx));
     }
 
-    pub fn init(&mut self) {
-        let pos = Point::new(0.2, 0.0);
-        let size = Size::new(0.4, 0.2);
-        self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
+    pub fn init(&mut self, level : u32) {
+        match level {
+                1 => 
+                {
+                    let pos = Point::new(0.2, 0.0);
+                    let size = Size::new(0.4, 0.2);
+                    self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
 
-        let pos = Point::new(0.8, 0.3);
-        let size = Size::new(0.4, 0.3);
-        self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
+                    let pos = Point::new(0.8, 0.3);
+                    let size = Size::new(0.4, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
 
-        let pos = Point::new(-1.4, -0.6);
-        let size = Size::new(0.2, 0.5);
-        self.systems.push(SystemHub::new(pos, size, "Cooling System".to_string()));
+                    let pos = Point::new(-1.4, -0.6);
+                    let size = Size::new(0.2, 0.5);
+                    self.systems.push(SystemHub::new(pos, size, "Cooling System".to_string()));
 
-        let pos = Point::new(-1.2, 0.7);
-        let size = Size::new(0.2, 0.3);
-        self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
+                    let pos = Point::new(-1.2, 0.7);
+                    let size = Size::new(0.2, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
 
-        for hub in self.systems.iter_mut() {
-            hub.reset_distress(self.breaking_change);
+                    for hub in self.systems.iter_mut() {
+                        hub.reset_distress(self.breaking_change);
+                    }
+
+                    // Don't flip the paramteres...
+                    self.add_connection(0, 1, 0, 0);
+                    self.add_connection(2, 0, 0, 1);
+                    self.add_connection(0, 3, 2, 0);
+                    self.add_connection(1, 3, 1, 1);
+                    self.add_connection(2, 1, 1, 2);
+
+                    // Add obstacles
+                    let pos = Point::new(-0.1, -0.3);
+                    let size = Size::new(0.9, 0.1);
+                    self.obstacles.push(SelectableRect::new(pos, size, ||{}));
+                }
+                2 => 
+                {
+                    let pos = Point::new(0.2, 0.0);
+                    let size = Size::new(0.4, 0.2);
+                    self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
+
+                    let pos = Point::new(0.8, 0.3);
+                    let size = Size::new(0.4, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
+
+                    let pos = Point::new(-1.4, -0.6);
+                    let size = Size::new(0.2, 0.5);
+                    self.systems.push(SystemHub::new(pos, size, "Cooling System".to_string()));
+
+                    let pos = Point::new(-1.2, 0.7);
+                    let size = Size::new(0.2, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
+
+                    for hub in self.systems.iter_mut() {
+                        hub.reset_distress(self.breaking_change);
+                    }
+
+                    // Don't flip the paramteres...
+                    self.add_connection(0, 1, 0, 0);
+                    self.add_connection(2, 0, 0, 1);
+                    self.add_connection(0, 3, 2, 0);
+                    self.add_connection(1, 3, 1, 1);
+                    self.add_connection(2, 1, 1, 2);
+
+                    // Add obstacles
+                    let pos = Point::new(-0.1, -0.3);
+                    let size = Size::new(0.6, 0.1);
+                    self.obstacles.push(SelectableRect::new(pos, size, ||{}));
+                    let pos = Point::new(-0.7, -0.4);
+                    let size = Size::new(0.1, 0.9);
+                    self.obstacles.push(SelectableRect::new(pos, size, ||{}));
+                }
+                _ => {;}  //Do nothing
         }
-
-        // Don't flip the paramteres...
-        self.add_connection(0, 1, 0, 0);
-        self.add_connection(2, 0, 0, 1);
-        self.add_connection(0, 3, 2, 0);
-        self.add_connection(1, 3, 1, 1);
-        self.add_connection(2, 1, 1, 2);
-
-        // Add obstacles
-        let pos = Point::new(-0.1, -0.3);
-        let size = Size::new(0.9, 0.1);
-        self.obstacles.push(SelectableRect::new(pos, size, ||{}));
     }
 
     pub fn update_systems(&mut self, args: &UpdateArgs) -> SystemUpdateStatus {
         let mut result = SystemUpdateStatus::AllFine;
+
+        for mut connection in self.connections.iter_mut() {
+            connection.0.borken = self.systems[connection.2].destroyed || self.systems[connection.1].destroyed;
+            let factor = CONNECTION_THROUGHPUT * args.dt as f32;
+            self.systems[connection.1].distress_level += self.systems[connection.2].distress_level * factor;
+            self.systems[connection.2].distress_level += self.systems[connection.1].distress_level * factor;
+        }
 
         self.breaking_change += 0.0001 * args.dt as f32; // Double as hard after ~8min
         for hub in self.systems.iter_mut() {
@@ -384,7 +435,7 @@ impl SystemHubCollection {
         }
 
         for conn in self.connections.iter() {
-            conn.0.render_connection(render_state, args, false);
+            conn.0.render_connection(render_state, args);
         }
 
         for obst in self.obstacles.iter() {
@@ -434,17 +485,17 @@ pub struct SystemConnection {
     /// In/middle/out point
     vertices: [Point; 3],
     /// How bad are things?
-    wiggle_level: f32
+    borken: bool
 }
 
 impl SystemConnection {
     /// Create an L-shape
     pub fn new(in_port: Point, mid_port: Point, out_port: Point) -> SystemConnection {
 
-        SystemConnection { vertices: [in_port, mid_port, out_port], wiggle_level: 0.0 }
+        SystemConnection { vertices: [in_port, mid_port, out_port], borken: false}
     }
 
-    pub fn render_connection(&self, render_state: &mut RenderState, args: &RenderArgs, borken: bool) {
+    pub fn render_connection(&self, render_state: &mut RenderState, args: &RenderArgs) {
         use graphics::*;
 
         let mut verts : Vec<Point> = Vec::new();
@@ -463,7 +514,7 @@ impl SystemConnection {
                 }
             };
 
-            let bork = if borken {
+            let bork = if self.borken {
                 1.0f32
             } else {
                 0.0f32
@@ -475,7 +526,7 @@ impl SystemConnection {
 
         let transform = std_transform();
         for i in 1..verts.len() {
-            Line::new(if borken { [0.7, 0.05, 0.05, 1.0] } else { WHITE }, CONNECTION_WIDTH as f64).draw([
+            Line::new(if self.borken { [0.7, 0.05, 0.05, 1.0] } else { WHITE }, CONNECTION_WIDTH as f64).draw([
                     verts[i-1].x as f64,
                     verts[i-1].y as f64,
                     verts[i].x as f64,
@@ -483,6 +534,12 @@ impl SystemConnection {
             ], &render_state.c.draw_state, transform, render_state.g);
         }
 
+        let rect = [(self.vertices[0].x - CONNECTION_WIDTH * 2.0) as f64, (self.vertices[0].y - CONNECTION_WIDTH * 2.0) as f64,
+                    (CONNECTION_WIDTH * 4.0) as f64, (CONNECTION_WIDTH * 4.0) as f64];
+        graphics::rectangle(WHITE, rect, transform, render_state.g);
+
+        let rect = [(self.vertices[2].x - CONNECTION_WIDTH * 2.0) as f64, (self.vertices[2].y - CONNECTION_WIDTH * 2.0) as f64,
+                    (CONNECTION_WIDTH * 4.0) as f64, (CONNECTION_WIDTH * 4.0) as f64];
         /*Line::new(WHITE, CONNECTION_WIDTH as f64).draw([
                     self.vertices[0].x as f64, self.vertices[0].y as f64,
                     self.vertices[1].x as f64, self.vertices[1].y as f64
@@ -491,13 +548,5 @@ impl SystemConnection {
                     self.vertices[1].x as f64, self.vertices[1].y as f64,
                     self.vertices[2].x as f64, self.vertices[2].y as f64
             ], &render_state.c.draw_state, transform, render_state.g);*/
-
-        if !borken {
-            for vertex in self.vertices.iter() {
-                let rect = [(vertex.x - CONNECTION_WIDTH * 2.0) as f64, (vertex.y - CONNECTION_WIDTH * 2.0) as f64,
-                            (CONNECTION_WIDTH * 4.0) as f64, (CONNECTION_WIDTH * 4.0) as f64];
-                graphics::rectangle(WHITE, rect, transform, render_state.g);
-            }
-        }
     }
 }
