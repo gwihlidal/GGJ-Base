@@ -47,6 +47,10 @@ impl SelectableRect {
         return 1.0 + self.time_inside.cos();
     }
 
+    pub fn upper_right_corner(&self) -> Point{
+        Point::new(self.position.x + self.size.width, self.position.y + self.size.height)
+    }
+
     pub fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
         use graphics::*;
 

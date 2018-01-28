@@ -57,6 +57,12 @@ impl Point {
         self.div(self.length())
     }
 
+    pub fn abs(mut self) -> Point {
+        self.x = self.x.abs();
+        self.y = self.y.abs();
+        self
+    }
+
     pub fn lerp(&self, other: &Point, t: f32) -> Point {
         Point {
             x: (1.0 - t) * self.x + t * other.x,
