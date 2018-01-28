@@ -475,6 +475,11 @@ fn render_coop(
     game_state: &GameState,
     render_state: &mut RenderState,
     args: &RenderArgs) {
+
+    if game_state.game_over {
+        return;
+    }
+
     for coop in game_state.coops.iter() {
         use graphics::*;
         use geometry::traits::Position;
@@ -487,14 +492,14 @@ fn render_coop(
             .scale(coop.radius() as f64, coop.radius() as f64);
 
             let mut pentagon: [Vec2d;5] = [[1.0,0.0], [0.309, -0.951], [-0.809, -0.588], [-0.809, 0.588], [0.309, 0.951]];
-        if let Some(dir) = coop.direction {
+            if let Some(dir) = coop.direction {
                 pentagon[0][0] *= 2.0;
                 transform = transform.rot_rad(dir as f64);
             }
 
         Polygon::new(COLOR).draw(&pentagon, &render_state.c.draw_state, transform, render_state.g);
     }
-    }
+}
 
 fn render_hubs(
     assets: &Assets,
@@ -531,12 +536,12 @@ fn render_ui(
     render_state: &mut RenderState,
     args: &RenderArgs) {
         if game_state.game_over {
-        let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
-                let gui_transform = scale_0_to_1
-                	.flip_v()
-                	.trans(0.0, -1.0)
-                	.scale(1.0 / assets.game_over.get_width() as f64, 1.0 / assets.game_over.get_height() as f64);
-        Image::new().draw(&assets.game_over, &render_state.c.draw_state, gui_transform, render_state.g);
+            let scale_0_to_1 = graphics::math::identity().trans(-1.0, -1.0).scale(2.0, 2.0);
+                    let gui_transform = scale_0_to_1
+                        .flip_v()
+                        .trans(0.0, -1.0)
+                        .scale(1.0 / assets.game_over.get_width() as f64, 1.0 / assets.game_over.get_height() as f64);
+            Image::new().draw(&assets.game_over, &render_state.c.draw_state, gui_transform, render_state.g);
         }
     }
 
@@ -566,32 +571,50 @@ fn main() {
         gfx_device_gl::create_main_targets_raw(dim,
                                                color_format.0,
                                                depth_format.0);
-    let output_color = Typed::new(output_color);
-    //let output_stencil = Typed::new(output_stencil);
+    let output_color : gfx::handle::RenderTargetView<gfx_device_gl::Resources, (gfx::format::R8_G8_B8_A8, gfx::format::Srgb)> = Typed::new(output_color);
+    let output_stencil = Typed::new(output_stencil);
 
     let (oscreen_tex, oscreen_srv, oscreen_rtv) = factory.create_render_target::<Srgba8>(
         draw_size.width as u16,
         draw_size.height as u16).unwrap();
 
-    let (oscreen2_tex, oscreen2_srv, oscreen2_dsv) = factory.create_depth_stencil::<DepthStencil>(
+    let (oscreen2_tex, oscreen2_srv, oscreen2_rtv) = factory.create_render_target::<Srgba8>(
         draw_size.width as u16,
         draw_size.height as u16).unwrap();
 
-    let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&QUAD_VERTS, ());
-
-	let pso = factory.create_pipeline_simple(
-		include_bytes!("../assets/Yasqueen.glslv"),
-		include_bytes!("../assets/Yasqueen.glslf"),
-		pipe::new()).unwrap();
+    let (_, _, oscreen_dsv) = factory.create_depth_stencil::<DepthStencil>(
+        draw_size.width as u16,
+        draw_size.height as u16).unwrap();
 
     let sinfo = gfx::texture::SamplerInfo::new(
         gfx::texture::FilterMethod::Bilinear,
         gfx::texture::WrapMode::Clamp);
 
-	let mut data = pipe::Data {
+    let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&QUAD_VERTS, ());
+    let (vertex_buffer2, slice2) = factory.create_vertex_buffer_with_slice(&QUAD_VERTS, ());
+
+	let pso_1 = factory.create_pipeline_simple(
+		include_bytes!("../assets/Yasqueen.glslv"),
+		include_bytes!("../assets/Yasqueen.glslf"),
+		pipe::new()).unwrap();
+
+    let pso_2 = factory.create_pipeline_simple(
+		include_bytes!("../assets/Roflcopter.glslv"),
+		include_bytes!("../assets/Roflcopter.glslf"),
+		pipe::new()).unwrap();
+
+    // Write to second offscreen target using first offscreen as input
+	let mut data_1 = pipe::Data {
 		vbuf: vertex_buffer,
         tex: (oscreen_srv, factory.create_sampler(sinfo)),
-		out: output_color,
+		out: oscreen2_rtv,
+	};
+
+    // Write to framebuffer target using second offscreen as input
+    let mut data_2 = pipe::Data {
+		vbuf: vertex_buffer2,
+        tex: (oscreen2_srv, factory.create_sampler(sinfo)),
+		out: output_color.clone(),
 	};
 
     let mut encoder = factory.create_command_buffer().into();
@@ -635,25 +658,37 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
-            g2d.draw(&mut encoder, &oscreen_rtv, &oscreen2_dsv, args.viewport(), |c, g| {
+            g2d.draw(&mut encoder, &oscreen_rtv, &oscreen_dsv, args.viewport(), |c, g| {
                 let mut render_state = RenderState { g, c };
-                //clear([0.0, 0.0, 0.0, 1.0], render_state.g);
                 render_irradiance(&mut factory, &assets, &game_state, &mut render_state, &args);
-                render_radiation(&mut render_state, &game_state.irradiance_field, game_state.pigeon_timer);
                 render_hubs(&assets, &game_state, &mut render_state, &args);
+                render_radiation(&mut render_state, &game_state.irradiance_field, game_state.pigeon_timer);
                 render_trajectory(&assets, &game_state, &mut render_state, &args);
                 render_coop(&assets, &game_state, &mut render_state, &args);
                 render_pigeons(&assets, &game_state, &mut render_state, &args);
-                render_ui(&assets, &game_state, &mut render_state, &args);
-
-                text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
-                    &mut glyph_cache,
-                    &DrawState::default(),
-                    render_state.c.transform.trans(10.0, 100.0), render_state.g).unwrap();
             });
 
-            encoder.clear(&data.out, [1.0, 0.0, 0.0, 1.0]);
-            encoder.draw(&slice, &pso, &data);
+            //encoder.clear(&data.out, [1.0, 0.0, 0.0, 1.0]);
+
+            // Chromatic abomination
+            encoder.draw(&slice, &pso_1, &data_1);
+
+            // Gouging blur
+            encoder.draw(&slice2, &pso_2, &data_2);
+
+            // Render you-eye without post
+            g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
+                let mut render_state = RenderState { g, c };
+
+                /*text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
+                    &mut glyph_cache,
+                    &DrawState::default(),
+                    render_state.c.transform.trans(10.0, 100.0), render_state.g).unwrap();*/
+
+                render_ui(&assets, &game_state, &mut render_state, &args);
+            });
+
+            // Weep, Mr. GPU
             encoder.flush(&mut device);
         }
 
