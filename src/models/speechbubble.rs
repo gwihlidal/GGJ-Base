@@ -4,12 +4,11 @@ use geometry::{Point,Size};
 
 use piston::input::RenderArgs;
 use RenderState;
-use Game;
 use graphics::Transformed;
 
 #[derive(Clone)]
 pub struct SpeechBubble {
-    pub rect: SelectableRect, 
+    pub rect: SelectableRect,
     pub tip_pos: Point
 }
 

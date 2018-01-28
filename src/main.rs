@@ -82,7 +82,7 @@ fn pos_to_irradiance_coord(p: Point) -> Point {
 
 fn simulate_trajectory(game_state: &GameState, origin: Point, cursor: Point) -> Trajectory {
     let mut pos = origin;
-    let mut vel = cursor - pos;
+    let mut vel = (cursor - pos) * 0.5f32;
     //let mut vel = vel * 0.1f32;
 
     let mut points = Vec::new();
@@ -93,7 +93,7 @@ fn simulate_trajectory(game_state: &GameState, origin: Point, cursor: Point) -> 
     for _ in 0..iter_count {
         points.push(pos);
         let grad = game_state.irradiance_field.sample_gradient(pos_to_irradiance_coord(pos));
-        vel = vel * 0.98 + grad * 0.23;
+        vel = vel * 0.98 + grad * 0.13;
 
         pos = pos + vel * delta_t;
 
@@ -114,28 +114,55 @@ fn std_transform() -> Matrix2d {
 
 fn on_mouse_move(game_state: &mut GameState, mouse: [f64;2]) {
     // Update coop pigeon shooting directions
-    for mut coop in game_state.coops.iter_mut() {
-        Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+    //for mut coop in game_state.coops.iter_mut() {
+    //    Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+    //}
+
+    let mut coop = &mut game_state.coops[0];
+    Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
+
+    for bubble in game_state.bubbles.iter_mut() {
+        SpeechBubble::update_mouse_move(bubble, 1.0, Point::new(mouse[0] as f32, mouse[1] as f32));
     }
 }
 
 fn on_mouse_click(game_state: &mut GameState, mouse: [f64;2]) {
     // Select coop if clicking inside
-    for coop_idx in 0..game_state.coops.len() {
-        let mut coop = &mut game_state.coops[coop_idx];
-        if Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32)) {
-            game_state.selected_coop = Some(coop_idx);
+//        for coop_idx in 0..game_state.coops.len() {
+//        	let mut coop = &mut game_state.coops[coop_idx];
+//            if Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32)) {
+//            	game_state.selected_coop = Some(coop_idx);
+//            }
+//        }
+
+		let coop_idx = 0;
+    	let mut coop = &mut game_state.coops[coop_idx];
+    	let fake_click = coop.position;
+        if Coop::update_mouse_click(coop, fake_click) {
+        	game_state.selected_coop = Some(coop_idx);
         }
-    }
+
+        // lololo
+        Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
 }
 
-fn on_mouse_release(game_state: &mut GameState) {
+fn on_mouse_release(game_state: &mut GameState, mouse: [f64;2]) {
     // Shoot pigeon if mouse button is released
-    for mut coop in game_state.coops.iter_mut() {
+    /*for mut coop in game_state.coops.iter_mut() {
         if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
             pigeon.trajectory = Some(game_state.aim_trajectory.clone());
             game_state.pigeons.push(pigeon);
         }
+    }*/
+
+    let coop = &mut game_state.coops[0];
+    if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
+        pigeon.trajectory = Some(game_state.aim_trajectory.clone());
+        game_state.pigeons.push(pigeon);
+    }
+
+    for mut bubble in game_state.bubbles.iter_mut() {
+        SpeechBubble::update_mouse_release(bubble, Point::new(mouse[0] as f32, mouse[1] as f32));
     }
 
     game_state.selected_coop = None;
@@ -147,8 +174,12 @@ fn on_game_over(game_state: &mut GameState) {
 }
 
 fn on_load(assets: &mut Assets, game_state: &mut GameState) {
-    let pos_coop = geometry::Point::new(0.0, -0.7);
+    let pos_coop = geometry::Point::new(0.0, -0.9);
     game_state.coops.push(Coop::new(pos_coop));
+    game_state.system_hubs.init();
+
+    let pos_bubble = geometry::Point::new(0.2, 0.5);
+    game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.4, 0.1), play_pigeon_sound, pos_bubble));
 
     // Pigeon animation frame #0
     assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
@@ -181,7 +212,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     game_state.irradiance_field.decay(0.998f32);
 
     // Fixed radiation source for the reactor or whatever
-    game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(0f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
+    game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(-0.5f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
 
     let mut pigeon_to_nuke = None;
     for i in 0..game_state.pigeons.len() {
@@ -191,10 +222,18 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
         }
     }
 
+    for coop in game_state.coops.iter_mut() {
+        coop.update(args.dt as f32);
+    }
+
     if let Some(i) = pigeon_to_nuke {
         let pos = game_state.pigeons[i].vector.position;
         game_state.pigeons.swap_remove(i);
-        game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32, RadiationBlendMode::Add);
+
+        if let PigeonAcceptanceLevel::GetRekd =
+            game_state.system_hubs.please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(pos) {
+                game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32, RadiationBlendMode::Add);
+            }
     }
 
     if let Some(coop_idx) = game_state.selected_coop {
@@ -203,6 +242,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     }
 
     game_state.pigeon_timer += args.dt;
+    game_state.system_hubs.update_systems(args);
 }
 
 #[allow(deprecated)]
@@ -262,11 +302,17 @@ fn render_trajectory(
     args: &RenderArgs) {
 
     use graphics::*;
-    if let Some(_) = game_state.selected_coop {
+    if let Some(coop) = game_state.selected_coop {
         let trajectory = &game_state.aim_trajectory;
         if trajectory.points.len() < 2 {
     		return;
     	}
+
+        let col = if game_state.coops[coop].can_fire() {
+            [0.1, 1.0, 0.3, 1.0]
+        } else {
+            [1.0, 0.0, 0.0, 1.0]
+        };
 
     	for i in 1..trajectory.points.len() {
 	    	Line::new(col, 0.005).draw([
@@ -341,6 +387,35 @@ fn render_coop(
     }
 }
 
+fn render_hubs(
+    assets: &Assets,
+    game_state: &GameState,
+    render_state: &mut RenderState,
+    args: &RenderArgs) {
+
+    game_state.system_hubs.render_systems(render_state, args);
+    for bubble in game_state.bubbles.iter() {
+            bubble.render_bubble(render_state, args);
+    }
+
+    //Speech Bubble Text
+    /*for bubble in game_state.bubbles.iter() {
+        let s = bubble.get_text();
+        let ss: &str = &s;
+        let position: &Point = bubble.get_point();
+        let h_offset: f32 = bubble.get_height()/2.0;
+
+        text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw(ss,
+            glyph_cache,
+            &render_state.c.draw_state,
+            std_transform()
+                .flip_v()
+                .trans(position.x as f64, -position.y as f64 - h_offset as f64 + 0.01 as f64)
+                .scale(0.001  as f64,0.001 as f64),
+            render_state.g).unwrap();
+    }*/
+}
+
 fn render_ui(
     assets: &Assets,
     game_state: &GameState,
@@ -410,6 +485,8 @@ fn main() {
     let mut game_state = GameState {
         pigeons: Vec::new(),
         coops: Vec::new(),
+        bubbles: Vec::new(),
+        system_hubs: SystemHubCollection::new(),
         irradiance_field: ScalarField::new(16 * 4, 9 * 4),
         aim_trajectory: Trajectory { points: Vec::new() },
         game_over: false,
@@ -431,6 +508,7 @@ fn main() {
                 render_trajectory(&assets, &game_state, &mut render_state, &args);
                 render_pigeons(&assets, &game_state, &mut render_state, &args);
                 render_coop(&assets, &game_state, &mut render_state, &args);
+                render_hubs(&assets, &game_state, &mut render_state, &args);
                 render_ui(&assets, &game_state, &mut render_state, &args);
 
                 text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
@@ -452,17 +530,10 @@ fn main() {
         // Update coop pigeon emission
         if let Some(Button::Mouse(button)) = e.press_args() {
             on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
-
-            if button == MouseButton::Left {
-                play_sound("assets/dummy.wav");
-            }
-            else if button == MouseButton::Right {
-                play_sound("assets/footstep.wav");
-            }
         }
 
         if let Some(Button::Mouse(_)) = e.release_args() {
-            on_mouse_release(&mut game_state);
+            on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
