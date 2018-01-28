@@ -108,7 +108,7 @@ fn render_box(
     }
 }
 
-const DEFAULT_DISTRESS_LEVEL_DELTA : f32 = 0.002;
+const DEFAULT_DISTRESS_LEVEL_DELTA : f32 = 0.001;
 
 impl SystemHub {
     /// Create a SystemHub
