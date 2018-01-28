@@ -171,6 +171,12 @@ impl SystemHub {
         let Size { width: size_x, height: size_y } = self.hub.size;
         render_box(self.hub.position, Point::new(size_x, size_y), render_state, pigeon_timer, args, self.distress_level);
     }
+
+    pub fn reset_distress(&mut self, difficulty: f32) {
+        self.distress_level_delta
+            = rand::thread_rng().gen_range(DEFAULT_DISTRESS_LEVEL_DELTA * 0.5, DEFAULT_DISTRESS_LEVEL_DELTA + difficulty);
+        self.distress_level = 0.0;
+    }
 }
 
 #[derive(Clone)]
@@ -210,7 +216,7 @@ impl SystemHubCollection {
         for hub in self.systems.iter_mut() {
             if !hub.destroyed && hub.hub.contains_point(pos) {
                 hub.distress_level = 0.0;
-                hub.distress_level_delta = DEFAULT_DISTRESS_LEVEL_DELTA;
+                hub.reset_distress(self.breaking_change);
                 return PigeonAcceptanceLevel::Adequate;
             }
         }
@@ -288,6 +294,10 @@ impl SystemHubCollection {
         let pos = Point::new(-1.2, 0.7);
         let size = Size::new(0.2, 0.3);
         self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
+
+        for hub in self.systems.iter_mut() {
+            hub.reset_distress(self.breaking_change);
+        }
 
         // Don't flip the paramteres...
         self.add_connection(0, 1, 0, 0);
