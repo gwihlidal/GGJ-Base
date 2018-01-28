@@ -8,6 +8,7 @@ use piston::input::RenderArgs;
 use geometry::{Point, Size};
 use models::selectable::SelectableRect;
 use RenderState;
+use GameState;
 use Assets;
 use UpdateArgs;
 use std_transform;
@@ -37,7 +38,10 @@ pub struct SystemHub {
 }
 
 fn render_box(
-    pos: Point, size: Point,
+    box_color: [f32; 4],
+    pos: Point,
+    size: Point,
+    game_state: &GameState,
     render_state: &mut RenderState,
     pigeon_timer: f32,
     args: &RenderArgs,
@@ -93,7 +97,7 @@ fn render_box(
     let transform = std_transform();
     let mut prev = verts[verts.len() - 1];
     for i in 0..verts.len() {
-        Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.003).draw([
+        Line::new(box_color, 0.003).draw([
                 prev.x as f64,
                 prev.y as f64,
                 verts[i].x as f64,
@@ -173,9 +177,25 @@ impl SystemHub {
         }
     }
 
-    pub fn render_hub(&self, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f32) {
+    pub fn render_hub(&self, game_state: &GameState, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f32) {
         let Size { width: size_x, height: size_y } = self.hub.size;
-        render_box(self.hub.position, Point::new(size_x, size_y), render_state, pigeon_timer, args, self.distress_level);
+        let mut in_bounds = false;
+        let aim_valid = game_state.aim_trajectory.points.len() > 0;
+        if aim_valid {
+            let aim_pos: Point = *game_state.aim_trajectory.points.last().unwrap();
+            if self.hub.contains_point(aim_pos) {
+                in_bounds = true;
+            }
+        }
+
+        let tom_sucks: bool = in_bounds;
+        let tom_color = if tom_sucks {
+            [0.2, 0.9, 0.0, 1.0]
+        } else {
+            // Tom still sucks
+            [1.0, 1.0, 1.0, 1.0]
+        };
+        render_box(tom_color, self.hub.position, Point::new(size_x, size_y), game_state, render_state, pigeon_timer, args, self.distress_level);
     }
 
     pub fn render_symbol(&self, assets: &Assets, render_state: &mut RenderState, args: &RenderArgs) {
@@ -266,7 +286,7 @@ impl SystemHubCollection {
         let b = &self.systems[b_idx];
         let mut dist_right_up  = b.hub.position - a.hub.upper_right_corner();
         let mut dist_left_down = a.hub.position - b.hub.upper_right_corner();
-        
+
         let mut vertices: [Point; 3] = [Point::new(0.0,0.0), Point::new(0.0,0.0), Point::new(0.0,0.0)];
 
 
@@ -354,17 +374,17 @@ impl SystemHubCollection {
         result
     }
 
-    pub fn render_systems(&self, assets: &Assets, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
+    pub fn render_systems(&self, assets: &Assets, game_state: &GameState, render_state: &mut RenderState, args: &RenderArgs, pigeon_timer: f64) {
         for hub in self.systems.iter() {
             hub.render_hubahuba(render_state, args, pigeon_timer);
         }
 
         for hub in self.systems.iter() {
-            hub.render_hub(render_state, args, pigeon_timer as f32);
+            hub.render_hub(game_state, render_state, args, pigeon_timer as f32);
         }
 
         for conn in self.connections.iter() {
-            conn.0.render_connection(render_state, args);
+            conn.0.render_connection(render_state, args, false);
         }
 
         for obst in self.obstacles.iter() {
@@ -424,24 +444,60 @@ impl SystemConnection {
         SystemConnection { vertices: [in_port, mid_port, out_port], wiggle_level: 0.0 }
     }
 
-    pub fn render_connection(&self, render_state: &mut RenderState, args: &RenderArgs) {
+    pub fn render_connection(&self, render_state: &mut RenderState, args: &RenderArgs, borken: bool) {
         use graphics::*;
 
-        let transform = std_transform();
+        let mut verts : Vec<Point> = Vec::new();
 
-        Line::new(WHITE, CONNECTION_WIDTH as f64).draw([
+        {
+            let mut make_edge = |a: Point, b: Point, bork: f32| {
+                let pts = ((b - a).length() * 20.0f32 * bork).max(2.0f32) as usize;
+                for i in 0..pts {
+                    let lt = (i as f32) / ((pts - 1) as f32);
+                    let mut p : Point = a.lerp(&b, lt);
+                    let derp = p;
+                    let scalar_scale = 0.5f32 + 1.5f32 * smoothstep(0.5, 0.0, (lt - 0.5f32).abs());
+                    p.x += (derp.y + i as f32 * 123f32).sin() * 0.01f32 * bork * scalar_scale;
+                    p.y += (derp.x + i as f32 * 324f32).sin() * 0.01f32 * bork * scalar_scale;
+                    verts.push(p);
+                }
+            };
+
+            let bork = if borken {
+                1.0f32
+            } else {
+                0.0f32
+            };
+
+            make_edge(self.vertices[0], self.vertices[1], bork);
+            make_edge(self.vertices[1], self.vertices[2], bork);
+        }
+
+        let transform = std_transform();
+        for i in 1..verts.len() {
+            Line::new(if borken { [0.7, 0.05, 0.05, 1.0] } else { WHITE }, CONNECTION_WIDTH as f64).draw([
+                    verts[i-1].x as f64,
+                    verts[i-1].y as f64,
+                    verts[i].x as f64,
+                    verts[i].y as f64,
+            ], &render_state.c.draw_state, transform, render_state.g);
+        }
+
+        /*Line::new(WHITE, CONNECTION_WIDTH as f64).draw([
                     self.vertices[0].x as f64, self.vertices[0].y as f64,
                     self.vertices[1].x as f64, self.vertices[1].y as f64
             ], &render_state.c.draw_state, transform, render_state.g);
         Line::new(WHITE, CONNECTION_WIDTH as f64).draw([
                     self.vertices[1].x as f64, self.vertices[1].y as f64,
                     self.vertices[2].x as f64, self.vertices[2].y as f64
-            ], &render_state.c.draw_state, transform, render_state.g);
+            ], &render_state.c.draw_state, transform, render_state.g);*/
 
-        for vertex in self.vertices.iter() {
-            let rect = [(vertex.x - CONNECTION_WIDTH * 2.0) as f64, (vertex.y - CONNECTION_WIDTH * 2.0) as f64,
-                        (CONNECTION_WIDTH * 4.0) as f64, (CONNECTION_WIDTH * 4.0) as f64];
-            graphics::rectangle(WHITE, rect, transform, render_state.g);
+        if !borken {
+            for vertex in self.vertices.iter() {
+                let rect = [(vertex.x - CONNECTION_WIDTH * 2.0) as f64, (vertex.y - CONNECTION_WIDTH * 2.0) as f64,
+                            (CONNECTION_WIDTH * 4.0) as f64, (CONNECTION_WIDTH * 4.0) as f64];
+                graphics::rectangle(WHITE, rect, transform, render_state.g);
+            }
         }
     }
 }
