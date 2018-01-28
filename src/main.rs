@@ -300,7 +300,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     for i in 0..len {
         if destroyed[i]
         {
-         game_state.irradiance_field.splat(pos_to_irradiance_coord(positions[i]), 7f32, RadiationBlendMode::Max);   
+         game_state.irradiance_field.splat(pos_to_irradiance_coord(positions[i]), 7f32, RadiationBlendMode::Max);
         }
     }
 
@@ -308,9 +308,9 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     //If all structures are destroyed, GAME OVER!
     if game_state.system_hubs.get_game_over()
     {
-        game_state.game_over = true; 
+        game_state.game_over = true;
     }
-    
+
     game_state.pigeon_timer += args.dt;
     if let SystemUpdateStatus::BigBadaBoom = game_state.system_hubs.update_systems(args) {
     	play_camera_shake();
@@ -596,10 +596,10 @@ fn render_hubs(
         return;
     }
 
-        game_state.system_hubs.render_systems(render_state, args, game_state.pigeon_timer);
-        for bubble in game_state.bubbles.iter() {
-                bubble.render_bubble(render_state, args);
-        }
+    game_state.system_hubs.render_systems(assets, render_state, args, game_state.pigeon_timer);
+    for bubble in game_state.bubbles.iter() {
+            bubble.render_bubble(render_state, args);
+    }
 
     //Speech Bubble Text
     /*for bubble in game_state.bubbles.iter() {
