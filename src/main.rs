@@ -287,6 +287,19 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
             simulate_trajectory(&game_state, game_state.coops[coop_idx].position, cursor);
     }
 
+    //Irradiate destroyed structures
+    let mut positions: Vec<Point> =  game_state.system_hubs.get_pos();
+    let mut destroyed: Vec<bool> =  game_state.system_hubs.get_destroyed();
+    let len : usize = positions.len();
+
+    for i in 0..len {
+        if destroyed[i]
+        {
+         game_state.irradiance_field.splat(pos_to_irradiance_coord(positions[i]), 7f32, RadiationBlendMode::Max);   
+        }
+    }
+
+
     game_state.pigeon_timer += args.dt;
     game_state.system_hubs.update_systems(args);
 

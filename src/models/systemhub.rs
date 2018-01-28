@@ -21,7 +21,11 @@ pub struct SystemHub {
     /// Delta of the distress level (per sec), randomly alter this one
     pub distress_level_delta: f32,
     /// Color, update by distress
-    color: [f32; 4]
+    color: [f32; 4],
+    // Flag for if the square has suffered a meltdown or not
+    pub destroyed: bool,
+    //Poisition of the center of the square
+    pub center: Point
 }
 
 const DEFAULT_DISTRESS_LEVEL_DELTA : f32 = 0.002;
@@ -31,16 +35,29 @@ impl SystemHub {
     pub fn new(position: Point, size: Size, name: String) -> SystemHub {
         SystemHub { name: name, distress_level: 0.0, distress_level_delta: DEFAULT_DISTRESS_LEVEL_DELTA,
                     color: [1.0,0.0,1.0,1.0],
+                    destroyed : false,
+                    center : Point::new(position.x+(size.width/2.0),position.y+(size.height/2.0)),
                     hub: SelectableRect::new(position, size, ||{}) } // There is an empty closure! :3
     }
 
     pub fn update_hub(&mut self, args: &UpdateArgs) {
-        self.distress_level += self.distress_level_delta * args.dt as f32;
-        self.distress_level = self.distress_level.max(0.0);
+        if self.destroyed
+        {
+            self.color = [0.0,0.0,0.0,1.0];
+        }
+        else {
+            self.distress_level += self.distress_level_delta * args.dt as f32;
+            self.distress_level = self.distress_level.max(0.0);
 
-        self.color = [self.distress_level, 1.0, self.distress_level, 1.0];
-        if self.distress_level > 1.0 {
-            self.color = [1.0,0.0,0.0,1.0];
+            self.color = [self.distress_level, 1.0, self.distress_level, 1.0];
+            if self.distress_level > 1.0 {
+                self.color = [1.0,0.0,0.0,1.0];
+            }
+
+            if self.distress_level > 3.0
+            {
+                self.destroyed = true;
+            }
         }
     }
 
@@ -75,6 +92,9 @@ impl SystemHubCollection {
 
     pub fn please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(&mut self, pos: Point) -> PigeonAcceptanceLevel {
         for hub in self.systems.iter_mut() {
+            if hub.destroyed{
+                return PigeonAcceptanceLevel::GetRekd;
+            }
             if hub.hub.contains_point(pos) {
                 hub.distress_level = 0.0;
                 hub.distress_level_delta = DEFAULT_DISTRESS_LEVEL_DELTA;
@@ -163,6 +183,27 @@ impl SystemHubCollection {
         for conn in self.connections.iter() {
             conn.0.render_connection(render_state, args);
         }
+    }
+
+    pub fn get_pos(& self) -> Vec<Point>
+    {
+        let mut positions = Vec::new();
+
+        for hub in self.systems.iter() {
+            positions.push(hub.center);
+        }
+
+        return positions;
+    }
+
+    pub fn get_destroyed(& self) -> Vec<bool>
+    {
+        let mut positions = Vec::new();
+        for hub in self.systems.iter() {
+            positions.push(hub.destroyed);
+        }
+
+        return positions;
     }
 }
 
