@@ -205,6 +205,7 @@ fn on_mouse_release(game_state: &mut GameState, mouse: [f64;2]) {
     if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
         pigeon.trajectory = Some(game_state.aim_trajectory.clone());
         game_state.pigeons.push(pigeon);
+        play_pigeon_sound();
     }
 
     for mut bubble in game_state.bubbles.iter_mut() {
@@ -224,8 +225,8 @@ fn on_load(assets: &mut Assets, game_state: &mut GameState) {
     game_state.coops.push(Coop::new(pos_coop));
     game_state.system_hubs.init();
 
-    let pos_bubble = geometry::Point::new(0.2, 0.5);
-    game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.4, 0.1), play_pigeon_sound, pos_bubble));
+    //let pos_bubble = geometry::Point::new(0.2, 0.5);
+    //game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.4, 0.1), play_pigeon_sound, pos_bubble));
 
     // Pigeon animation frame #0
     assets.pigeon_points_f0.push((Point::new(400.0, 442.043),   Point::new(100.0, 442.043)));
@@ -300,6 +301,12 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     }
 
 
+    //If all structures are destroyed, GAME OVER!
+    if game_state.system_hubs.get_game_over()
+    {
+        game_state.game_over = true; 
+    }
+    
     game_state.pigeon_timer += args.dt;
     game_state.system_hubs.update_systems(args);
 
@@ -839,11 +846,11 @@ fn main() {
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
             if key == Key::C {
-                play_pigeon_sound();
+                //play_pigeon_sound();
             }
 
             if key == Key::G {
-                on_game_over(&mut game_state);
+                //on_game_over(&mut game_state);
             }
 
             if key == Key::S {

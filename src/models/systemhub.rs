@@ -54,7 +54,7 @@ impl SystemHub {
                 self.color = [1.0,0.0,0.0,1.0];
             }
 
-            if self.distress_level > 3.0
+            if self.distress_level > 2.0
             {
                 self.destroyed = true;
             }
@@ -212,6 +212,17 @@ impl SystemHubCollection {
         }
 
         return positions;
+    }
+
+    pub fn get_game_over(&self)->bool
+    {
+        for hub in self.systems.iter() {
+            if (!hub.destroyed)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
