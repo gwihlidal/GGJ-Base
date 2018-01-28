@@ -89,10 +89,13 @@ pub struct GameState {
     aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
     game_over: bool,
+    starting: bool,
     pigeon_timer: f64,
 }
 
 pub struct Assets {
+    radioactive: Texture<gfx_device_gl::Resources>,
+    starting: Texture<gfx_device_gl::Resources>,
     game_over: Texture<gfx_device_gl::Resources>,
     pigeon_points_f0: Vec<(geometry::Point, geometry::Point)>,
     pigeon_points_f1: Vec<(geometry::Point, geometry::Point)>,
@@ -137,7 +140,7 @@ static mut SHAKE_ANGLE: f32 = 0.0;
 fn std_transform() -> Matrix2d {
     use graphics::*;
     let aspect = 16.0 / 9.0;
-    let viewportCenter = Point { x:0.0, y:0.0 };
+    let viewport_center = Point { x:0.0, y:0.0 };
     unsafe {
         if SHAKE_ON {
             graphics::math::identity().scale(1.0 / aspect, 1.0).trans(SHAKE_IT.x as f64, SHAKE_IT.y as f64)
@@ -296,7 +299,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     for i in 0..len {
         if destroyed[i]
         {
-         game_state.irradiance_field.splat(pos_to_irradiance_coord(positions[i]), 7f32, RadiationBlendMode::Max);   
+         game_state.irradiance_field.splat(pos_to_irradiance_coord(positions[i]), 7f32, RadiationBlendMode::Max);
         }
     }
 
@@ -311,13 +314,13 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     game_state.system_hubs.update_systems(args);
 
     unsafe {
-        if (SHAKE_ON)
+        if SHAKE_ON
         {
             if SHAKE_RADIUS <= 0.001 {
                 SHAKE_ON = false;
             }
 
-            SHAKE_ANGLE += (180.0 - rand::thread_rng().gen_range(1.0, 60.0));
+            SHAKE_ANGLE += 180.0 - rand::thread_rng().gen_range(1.0, 60.0);
             SHAKE_RADIUS *= 0.9;
             SHAKE_IT = Point { x: SHAKE_ANGLE.sin() * SHAKE_RADIUS, y: SHAKE_ANGLE.cos() * SHAKE_RADIUS };
         }
@@ -367,6 +370,10 @@ fn render_irradiance(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
+    if game_state.starting {
+        return;
+    }
+
     let sf = &game_state.irradiance_field;
     let sf_texture = Texture::from_image(
         factory,
@@ -388,6 +395,10 @@ fn render_trajectory(
     game_state: &GameState,
     render_state: &mut RenderState,
     args: &RenderArgs) {
+
+    if game_state.starting {
+        return;
+    }
 
     use graphics::*;
     if let Some(coop) = game_state.selected_coop {
@@ -420,6 +431,10 @@ fn render_pigeons(
     game_state: &GameState,
     render_state: &mut RenderState,
     args: &RenderArgs) {
+
+    if game_state.starting {
+        return;
+    }
 
     use geometry::traits::Position;
 
@@ -470,8 +485,12 @@ const MARCHING_SQUARES_SOLID: &'static [&'static [&'static [[f64; 2]]]] = &[
 	&[&[ [0f64, 0f64], [2f64, 0f64], [2f64, 2f64], [0f64, 2f64] ]],	// 1111
 ];
 
-fn render_radiation(render_state: &mut RenderState, sf: &ScalarField, time: f64) {
+fn render_radiation(game_state: &GameState, render_state: &mut RenderState, sf: &ScalarField, time: f64) {
 	use graphics::*;
+
+    if game_state.starting {
+        return;
+    }
 
 	const X_COUNT : usize = 16 * 2;
 	const Y_COUNT : usize = 9 * 2;
@@ -539,7 +558,7 @@ fn render_coop(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
-    if game_state.game_over {
+    if game_state.game_over || game_state.starting {
         return;
     }
 
@@ -570,10 +589,18 @@ fn render_hubs(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
-        game_state.system_hubs.render_systems(render_state, args, game_state.pigeon_timer);
-        for bubble in game_state.bubbles.iter() {
-                bubble.render_bubble(render_state, args);
-        }
+    if game_state.starting {
+        return;
+    }
+    game_state.system_hubs.render_systems(render_state, args, game_state.pigeon_timer);
+    for bubble in game_state.bubbles.iter() {
+      bubble.render_bubble(render_state, args);
+    }
+
+    game_state.system_hubs.render_systems(render_state, args);
+    for bubble in game_state.bubbles.iter() {
+            bubble.render_bubble(render_state, args);
+    }
 
     //Speech Bubble Text
     /*for bubble in game_state.bubbles.iter() {
@@ -605,6 +632,13 @@ fn render_ui(
                         .trans(0.0, -1.0)
                         .scale(1.0 / assets.game_over.get_width() as f64, 1.0 / assets.game_over.get_height() as f64);
             Image::new().draw(&assets.game_over, &render_state.c.draw_state, gui_transform, render_state.g);
+        } else if game_state.starting {
+            let scale_0_to_1 = std_transform_0_to_1();
+                    let gui_transform = scale_0_to_1
+                        .flip_v()
+                        .trans(0.0, -1.0)
+                        .scale(1.0 / assets.starting.get_width() as f64, 1.0 / assets.starting.get_height() as f64);
+            Image::new().draw(&assets.starting, &render_state.c.draw_state, gui_transform, render_state.g);
         }
     }
 
@@ -692,6 +726,18 @@ fn main() {
         TextureSettings::new()).unwrap();
 
     let mut assets = Assets {
+        radioactive: Texture::from_path(
+            &mut factory,
+            assets.join("Radioactive.png"),
+            Flip::None,
+            &TextureSettings::new()
+        ).unwrap(),
+        starting: Texture::from_path(
+            &mut factory,
+            assets.join("Starting.png"),
+            Flip::None,
+            &TextureSettings::new()
+        ).unwrap(),
         game_over: Texture::from_path(
             &mut factory,
             assets.join("GameOver.png"),
@@ -710,6 +756,7 @@ fn main() {
         irradiance_field: ScalarField::new(16 * 4, 9 * 4),
         aim_trajectory: Trajectory { points: Vec::new() },
         game_over: false,
+        starting: true,
         selected_coop: None,
         pigeon_timer: 0.0,
     };
@@ -725,7 +772,7 @@ fn main() {
                 let mut render_state = RenderState { g, c };
                 render_irradiance(&mut factory, &assets, &game_state, &mut render_state, &args);
                 render_hubs(&assets, &game_state, &mut render_state, &args);
-                render_radiation(&mut render_state, &game_state.irradiance_field, game_state.pigeon_timer);
+                render_radiation(&game_state, &mut render_state, &game_state.irradiance_field, game_state.pigeon_timer);
                 render_trajectory(&assets, &game_state, &mut render_state, &args);
                 render_coop(&assets, &game_state, &mut render_state, &args);
                 render_pigeons(&assets, &game_state, &mut render_state, &args);
@@ -764,12 +811,18 @@ fn main() {
         }
 
         // Update coop pigeon emission
-        if let Some(Button::Mouse(button)) = e.press_args(){
-            on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+        if let Some(Button::Mouse(button)) = e.press_args() {
+            if !game_state.starting {
+                on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+            }
         }
 
         if let Some(Button::Mouse(_)) = e.release_args() {
-            on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+            if game_state.starting {
+                game_state.starting = false;
+            } else {
+                on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+            }
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
@@ -803,5 +856,5 @@ fn main() {
         e.resize(|_w, _h| {
             //println!("Resized '{}, {}'", w, h)
         });
-}
+    }
 }
