@@ -833,6 +833,28 @@ fn main() {
                 //on_game_over(&mut game_state);
             }
 
+            if key == Key::R {
+                //on_game_over(&mut game_state);
+                game_state.game_over = false;
+                game_state.starting = true;
+
+                game_state = GameState {
+                    pigeons: Vec::new(),
+                    coops: Vec::new(),
+                    bubbles: Vec::new(),
+                    system_hubs: SystemHubCollection::new(),
+                    irradiance_field: ScalarField::new(16 * 4, 9 * 4),
+                    aim_trajectory: Trajectory { points: Vec::new() },
+                    game_over: false,
+                    starting: true,
+                    selected_coop: None,
+                    pigeon_timer: 0.0,
+                };
+
+                on_load(&mut assets, &mut game_state);
+
+            }
+
             if key == Key::S {
                 play_camera_shake();
             }
