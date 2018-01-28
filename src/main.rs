@@ -89,6 +89,7 @@ pub struct GameState {
     aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
     game_over: bool,
+    game_over_time: f64,
     starting: bool,
     pigeon_timer: f64,
 }
@@ -218,11 +219,6 @@ fn on_mouse_release(game_state: &mut GameState, mouse: [f64;2]) {
     game_state.selected_coop = None;
 }
 
-fn on_game_over(game_state: &mut GameState) {
-    // Test with toggle
-    game_state.game_over = !game_state.game_over;
-}
-
 fn on_load(assets: &mut Assets, game_state: &mut GameState) {
     let pos_coop = geometry::Point::new(0.0, -0.9);
     game_state.coops.push(Coop::new(pos_coop));
@@ -255,6 +251,10 @@ fn on_load(assets: &mut Assets, game_state: &mut GameState) {
 }
 
 fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
+	if game_state.starting {
+		return;
+	}
+
     // Rotate 2 radians per second.
     //self.game_state.rotation += 2.0 * args.dt;
 
@@ -306,9 +306,10 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
 
 
     //If all structures are destroyed, GAME OVER!
-    if game_state.system_hubs.get_game_over()
+    if game_state.system_hubs.get_game_over() && !game_state.game_over
     {
         game_state.game_over = true;
+        game_state.game_over_time = game_state.pigeon_timer;
     }
 
     game_state.pigeon_timer += args.dt;
@@ -347,7 +348,7 @@ fn play_pigeon_sound()
 {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    let x: u32 = rng.gen_range(1,13);
+    let x: u32 = rng.gen_range(1,12);
     let s: String = x.to_string();
     let ss: &str = &s;
 
@@ -755,6 +756,7 @@ fn main() {
         irradiance_field: ScalarField::new(16 * 4, 9 * 4),
         aim_trajectory: Trajectory { points: Vec::new() },
         game_over: false,
+        game_over_time: 0.0,
         starting: true,
         selected_coop: None,
         pigeon_timer: 0.0,
@@ -820,23 +822,26 @@ fn main() {
             if game_state.starting {
                 game_state.starting = false;
             } else if game_state.game_over{
-                game_state.game_over = false;
-                game_state.starting = true;
+            	if game_state.pigeon_timer - game_state.game_over_time > 1.0 {
+	                game_state.game_over = false;
+	                game_state.starting = true;
 
-                game_state = GameState {
-                    pigeons: Vec::new(),
-                    coops: Vec::new(),
-                    bubbles: Vec::new(),
-                    system_hubs: SystemHubCollection::new(),
-                    irradiance_field: ScalarField::new(16 * 4, 9 * 4),
-                    aim_trajectory: Trajectory { points: Vec::new() },
-                    game_over: false,
-                    starting: true,
-                    selected_coop: None,
-                    pigeon_timer: 0.0,
-                };
+	                game_state = GameState {
+	                    pigeons: Vec::new(),
+	                    coops: Vec::new(),
+	                    bubbles: Vec::new(),
+	                    system_hubs: SystemHubCollection::new(),
+	                    irradiance_field: ScalarField::new(16 * 4, 9 * 4),
+	                    aim_trajectory: Trajectory { points: Vec::new() },
+	                    game_over: false,
+	                    game_over_time: 0.0,
+	                    starting: true,
+	                    selected_coop: None,
+	                    pigeon_timer: 0.0,
+	                };
 
-                on_load(&mut assets, &mut game_state);
+	                on_load(&mut assets, &mut game_state);
+	            }
             }
             else{
             on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
