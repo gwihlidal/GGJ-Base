@@ -327,38 +327,81 @@ impl SystemHubCollection {
         self.connections.push((SystemConnection::new(vertices[0], vertices[1], vertices[2]), a_idx, b_idx));
     }
 
-    pub fn init(&mut self) {
-        let pos = Point::new(0.2, 0.0);
-        let size = Size::new(0.4, 0.2);
-        self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
+    pub fn init(&mut self, level : u32) {
+        match level {
+                1 => 
+                {
+                    let pos = Point::new(0.2, 0.0);
+                    let size = Size::new(0.4, 0.2);
+                    self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
 
-        let pos = Point::new(0.8, 0.3);
-        let size = Size::new(0.4, 0.3);
-        self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
+                    let pos = Point::new(0.8, 0.3);
+                    let size = Size::new(0.4, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
 
-        let pos = Point::new(-1.4, -0.6);
-        let size = Size::new(0.2, 0.5);
-        self.systems.push(SystemHub::new(pos, size, "Cooling System".to_string()));
+                    let pos = Point::new(-1.4, -0.6);
+                    let size = Size::new(0.2, 0.5);
+                    self.systems.push(SystemHub::new(pos, size, "Cooling System".to_string()));
 
-        let pos = Point::new(-1.2, 0.7);
-        let size = Size::new(0.2, 0.3);
-        self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
+                    let pos = Point::new(-1.2, 0.7);
+                    let size = Size::new(0.2, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
 
-        for hub in self.systems.iter_mut() {
-            hub.reset_distress(self.breaking_change);
+                    for hub in self.systems.iter_mut() {
+                        hub.reset_distress(self.breaking_change);
+                    }
+
+                    // Don't flip the paramteres...
+                    self.add_connection(0, 1, 0, 0);
+                    self.add_connection(2, 0, 0, 1);
+                    self.add_connection(0, 3, 2, 0);
+                    self.add_connection(1, 3, 1, 1);
+                    self.add_connection(2, 1, 1, 2);
+
+                    // Add obstacles
+                    let pos = Point::new(-0.1, -0.3);
+                    let size = Size::new(0.9, 0.1);
+                    self.obstacles.push(SelectableRect::new(pos, size, ||{}));
+                }
+                2 => 
+                {
+                    let pos = Point::new(0.2, 0.0);
+                    let size = Size::new(0.4, 0.2);
+                    self.systems.push(SystemHub::new(pos, size, "Reactor Chamber".to_string()));
+
+                    let pos = Point::new(0.8, 0.3);
+                    let size = Size::new(0.4, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Kitchen".to_string()));
+
+                    let pos = Point::new(-1.4, -0.6);
+                    let size = Size::new(0.2, 0.5);
+                    self.systems.push(SystemHub::new(pos, size, "Cooling System".to_string()));
+
+                    let pos = Point::new(-1.2, 0.7);
+                    let size = Size::new(0.2, 0.3);
+                    self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
+
+                    for hub in self.systems.iter_mut() {
+                        hub.reset_distress(self.breaking_change);
+                    }
+
+                    // Don't flip the paramteres...
+                    self.add_connection(0, 1, 0, 0);
+                    self.add_connection(2, 0, 0, 1);
+                    self.add_connection(0, 3, 2, 0);
+                    self.add_connection(1, 3, 1, 1);
+                    self.add_connection(2, 1, 1, 2);
+
+                    // Add obstacles
+                    let pos = Point::new(-0.1, -0.3);
+                    let size = Size::new(0.6, 0.1);
+                    self.obstacles.push(SelectableRect::new(pos, size, ||{}));
+                    let pos = Point::new(-0.7, -0.4);
+                    let size = Size::new(0.1, 0.9);
+                    self.obstacles.push(SelectableRect::new(pos, size, ||{}));
+                }
+                _ => {;}  //Do nothing
         }
-
-        // Don't flip the paramteres...
-        self.add_connection(0, 1, 0, 0);
-        self.add_connection(2, 0, 0, 1);
-        self.add_connection(0, 3, 2, 0);
-        self.add_connection(1, 3, 1, 1);
-        self.add_connection(2, 1, 1, 2);
-
-        // Add obstacles
-        let pos = Point::new(-0.1, -0.3);
-        let size = Size::new(0.9, 0.1);
-        self.obstacles.push(SelectableRect::new(pos, size, ||{}));
     }
 
     pub fn update_systems(&mut self, args: &UpdateArgs) -> SystemUpdateStatus {

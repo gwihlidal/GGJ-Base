@@ -197,9 +197,14 @@ fn on_mouse_release(game_state: &mut GameState, mouse: [f64;2]) {
 }
 
 fn on_load(assets: &mut Assets, game_state: &mut GameState) {
+
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let x: u32 = rng.gen_range(1,3);
+
     let pos_coop = geometry::Point::new(0.0, -0.9);
     game_state.coops.push(Coop::new(pos_coop));
-    game_state.system_hubs.init();
+    game_state.system_hubs.init(x);
 
     //let pos_bubble = geometry::Point::new(0.2, 0.5);
     //game_state.bubbles.push(SpeechBubble::new(pos_bubble,Size::new(0.4, 0.1), play_pigeon_sound, pos_bubble));
