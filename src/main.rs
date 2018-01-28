@@ -153,21 +153,14 @@ fn std_transform() -> Matrix2d {
 
 fn play_camera_shake() {
     unsafe {
-        //if !SHAKE_ON {
-            SHAKE_RADIUS = 0.15;
-            SHAKE_ANGLE = rand::thread_rng().gen_range(1.0, 360.0);
-            SHAKE_IT = Point { x: SHAKE_ANGLE.sin() * SHAKE_RADIUS, y: SHAKE_ANGLE.cos() * SHAKE_RADIUS };
-           SHAKE_ON = true;
-       // }
+        SHAKE_RADIUS = 0.15;
+        SHAKE_ANGLE = rand::thread_rng().gen_range(1.0, 360.0);
+        SHAKE_IT = Point { x: SHAKE_ANGLE.sin() * SHAKE_RADIUS, y: SHAKE_ANGLE.cos() * SHAKE_RADIUS };
+        SHAKE_ON = true;
     }
 }
 
 fn on_mouse_move(game_state: &mut GameState, mouse: [f64;2]) {
-    // Update coop pigeon shooting directions
-    //for mut coop in game_state.coops.iter_mut() {
-    //    Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
-    //}
-
     let mut coop = &mut game_state.coops[0];
     Coop::update_mouse_move(coop, Point::new(mouse[0] as f32, mouse[1] as f32));
 
@@ -177,14 +170,6 @@ fn on_mouse_move(game_state: &mut GameState, mouse: [f64;2]) {
 }
 
 fn on_mouse_click(game_state: &mut GameState, mouse: [f64;2]) {
-    // Select coop if clicking inside
-//        for coop_idx in 0..game_state.coops.len() {
-//        	let mut coop = &mut game_state.coops[coop_idx];
-//            if Coop::update_mouse_click(coop, Point::new(mouse[0] as f32, mouse[1] as f32)) {
-//            	game_state.selected_coop = Some(coop_idx);
-//            }
-//        }
-
 		let coop_idx = 0;
     	let mut coop = &mut game_state.coops[coop_idx];
     	let fake_click = coop.position;
@@ -197,14 +182,6 @@ fn on_mouse_click(game_state: &mut GameState, mouse: [f64;2]) {
 }
 
 fn on_mouse_release(game_state: &mut GameState, mouse: [f64;2]) {
-    // Shoot pigeon if mouse button is released
-    /*for mut coop in game_state.coops.iter_mut() {
-        if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
-            pigeon.trajectory = Some(game_state.aim_trajectory.clone());
-            game_state.pigeons.push(pigeon);
-        }
-    }*/
-
     let coop = &mut game_state.coops[0];
     if let Some(mut pigeon) = Coop::update_mouse_release(coop) {
         pigeon.trajectory = Some(game_state.aim_trajectory.clone());
@@ -255,9 +232,6 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
 		return;
 	}
 
-    // Rotate 2 radians per second.
-    //self.game_state.rotation += 2.0 * args.dt;
-
     // Radioactive decay
     game_state.irradiance_field.decay(0.88f32.powf(args.dt as f32));
 
@@ -292,7 +266,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
             simulate_trajectory(&game_state, game_state.coops[coop_idx].position, cursor);
     }
 
-    //Irradiate destroyed structures
+    // Irradiate destroyed structures
     let mut positions: Vec<Point> =  game_state.system_hubs.get_pos();
     let mut destroyed: Vec<bool> =  game_state.system_hubs.get_destroyed();
     let len : usize = positions.len();
@@ -304,8 +278,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
         }
     }
 
-
-    //If all structures are destroyed, GAME OVER!
+    // If all structures are destroyed, GAME OVER!
     if game_state.system_hubs.get_game_over() && !game_state.game_over
     {
         game_state.game_over = true;
@@ -374,7 +347,7 @@ fn render_irradiance(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
-    if game_state.starting {
+    if game_state.starting || game_state.game_over {
         return;
     }
 
@@ -400,7 +373,7 @@ fn render_trajectory(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
-    if game_state.starting {
+    if game_state.starting || game_state.game_over {
         return;
     }
 
@@ -436,7 +409,7 @@ fn render_pigeons(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
-    if game_state.starting {
+    if game_state.starting || game_state.game_over {
         return;
     }
 
@@ -492,7 +465,7 @@ const MARCHING_SQUARES_SOLID: &'static [&'static [&'static [[f64; 2]]]] = &[
 fn render_radiation(game_state: &GameState, render_state: &mut RenderState, sf: &ScalarField, time: f64) {
 	use graphics::*;
 
-    if game_state.starting {
+    if game_state.starting || game_state.game_over {
         return;
     }
 
@@ -593,7 +566,7 @@ fn render_hubs(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
-    if game_state.starting {
+    if game_state.starting || game_state.game_over {
         return;
     }
 
@@ -779,23 +752,19 @@ fn main() {
                 render_pigeons(&assets, &game_state, &mut render_state, &args);
             });
 
-            //encoder.clear(&data.out, [1.0, 0.0, 0.0, 1.0]);
-
             // Chromatic abomination
             encoder.draw(&slice, &pso_1, &data_1);
 
             // Gouging blur
             encoder.draw(&slice2, &pso_2, &data_2);
 
+            if game_state.starting || game_state.game_over {
+                encoder.clear(&data_2.out, [0.0, 0.0, 0.0, 1.0]);
+            }
+
             // Render you-eye without post
             g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
                 let mut render_state = RenderState { g, c };
-
-                /*text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
-                    &mut glyph_cache,
-                    &DrawState::default(),
-                    render_state.c.transform.trans(10.0, 100.0), render_state.g).unwrap();*/
-
                 render_ui(&assets, &game_state, &mut render_state, &args);
             });
 
@@ -814,7 +783,7 @@ fn main() {
         // Update coop pigeon emission
         if let Some(Button::Mouse(button)) = e.press_args() {
             if !game_state.starting {
-            on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+                on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
             }
         }
 
@@ -843,9 +812,9 @@ fn main() {
 	                on_load(&mut assets, &mut game_state);
 	            }
             }
-            else{
-            on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
-        }
+            else {
+                on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+            }
         }
 
         if let Some(Button::Keyboard(key)) = e.press_args() {
