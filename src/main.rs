@@ -8,7 +8,7 @@ extern crate piston;
 extern crate graphics;
 extern crate gfx_graphics;
 extern crate find_folder;
-extern crate gfx;
+#[macro_use] extern crate gfx;
 extern crate gfx_device_gl;
 extern crate rodio;
 extern crate rand;
@@ -29,6 +29,8 @@ use graphics::draw_state::Blend;
 use graphics::*;
 use piston::input::*;
 use gfx_graphics::*;
+use gfx::{Device, VertexBuffer, RenderTarget};
+use gfx::traits::FactoryExt;
 
 mod scalar_field;
 use scalar_field::*;
@@ -50,11 +52,31 @@ use models::speechbubble::SpeechBubble;
 use models::systemhub::{SystemHubCollection, PigeonAcceptanceLevel};
 use geometry::traits::Collide;
 
+gfx_defines!{
+    vertex Vertex {
+        pos: [f32; 2] = "a_pos",
+        uv: [f32; 2] = "a_uv",
+    }
+
+    pipeline pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+        tex: gfx::TextureSampler<[f32; 4]> = "t_color",
+        out: gfx::RenderTarget<Srgba8> = "Target0",
+    }
+}
+
+const QUAD_VERTS: [Vertex; 6] = [
+	Vertex { pos: [-1.0, -1.0], uv: [0.0, 0.0] }, // Bottom Left
+	Vertex { pos: [ 1.0, -1.0], uv: [1.0, 0.0] }, // Bottom Right
+	Vertex { pos: [-1.0,  1.0], uv: [0.0, 1.0] }, // Top Left
+    Vertex { pos: [-1.0,  1.0], uv: [0.0, 1.0] }, // Top Left
+	Vertex { pos: [ 1.0, -1.0], uv: [1.0, 0.0] }, // Bottom Right
+	Vertex { pos: [ 1.0,  1.0], uv: [1.0, 1.0] }, // Top Right
+];
+
 pub struct RenderState<'a, 'b: 'a> {
     g: &'a mut GfxGraphics<'b, gfx_device_gl::Resources, gfx_device_gl::CommandBuffer>,
     c: graphics::Context,
-     //window: &'a GlutinWindow
-     //g2d: &'a mut gfx_graphics::Gfx2d<gfx_device_gl::Resources>,
 }
 
 pub struct GameState {
@@ -519,7 +541,7 @@ fn render_ui(
 fn main() {
 
     let opengl = OpenGL::V3_2;
-    let samples = 4;
+    let samples = 1;
     let mut window: GlutinWindow = WindowSettings::new(
             "Irradiant Descent",
             [1920, 1080]
@@ -543,7 +565,32 @@ fn main() {
                                                color_format.0,
                                                depth_format.0);
     let output_color = Typed::new(output_color);
-    let output_stencil = Typed::new(output_stencil);
+    //let output_stencil = Typed::new(output_stencil);
+
+    let (oscreen_tex, oscreen_srv, oscreen_rtv) = factory.create_render_target::<Srgba8>(
+        draw_size.width as u16,
+        draw_size.height as u16).unwrap();
+
+    let (oscreen2_tex, oscreen2_srv, oscreen2_dsv) = factory.create_depth_stencil::<DepthStencil>(
+        draw_size.width as u16,
+        draw_size.height as u16).unwrap();
+
+    let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&QUAD_VERTS, ());
+
+	let pso = factory.create_pipeline_simple(
+		include_bytes!("../assets/Yasqueen.glslv"),
+		include_bytes!("../assets/Yasqueen.glslf"),
+		pipe::new()).unwrap();
+
+    let sinfo = gfx::texture::SamplerInfo::new(
+        gfx::texture::FilterMethod::Bilinear,
+        gfx::texture::WrapMode::Clamp);
+
+	let mut data = pipe::Data {
+		vbuf: vertex_buffer,
+        tex: (oscreen_srv, factory.create_sampler(sinfo)),
+		out: output_color,
+	};
 
     let mut encoder = factory.create_command_buffer().into();
     let mut g2d = Gfx2d::new(opengl, &mut factory);
@@ -586,7 +633,7 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
-            g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
+            g2d.draw(&mut encoder, &oscreen_rtv, &oscreen2_dsv, args.viewport(), |c, g| {
                 let mut render_state = RenderState { g, c };
                 //clear([0.0, 0.0, 0.0, 1.0], render_state.g);
                 render_irradiance(&mut factory, &assets, &game_state, &mut render_state, &args);
@@ -602,6 +649,9 @@ fn main() {
                     &DrawState::default(),
                     render_state.c.transform.trans(10.0, 100.0), render_state.g).unwrap();
             });
+
+            encoder.clear(&data.out, [1.0, 0.0, 0.0, 1.0]);
+            encoder.draw(&slice, &pso, &data);
             encoder.flush(&mut device);
         }
 
@@ -642,12 +692,12 @@ fn main() {
             on_mouse_move(&mut game_state, [cursor.x as f64, cursor.y as f64]);
         });
 
-        e.text(|text| {
-            println!("Typed '{}'", text)
+        e.text(|_text| {
+            //println!("Typed '{}'", text)
         });
 
-        e.resize(|w, h| {
-            println!("Resized '{}, {}'", w, h)
+        e.resize(|_w, _h| {
+            //println!("Resized '{}, {}'", w, h)
         });
 }
 }
