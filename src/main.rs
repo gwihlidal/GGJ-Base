@@ -14,6 +14,7 @@ extern crate rodio;
 extern crate rand;
 extern crate image;
 
+use rand::Rng;
 use std::path::Path;
 use std::io::BufReader;
 use std::f32;
@@ -128,10 +129,33 @@ fn simulate_trajectory(game_state: &GameState, origin: Point, cursor: Point) -> 
     	Trajectory { points }
     }
 
+static mut SHAKE_IT: Point = Point { x: 0.0, y: 0.0 };
+static mut SHAKE_ON: bool = false;
+static mut SHAKE_RADIUS: f32 = 0.1;
+static mut SHAKE_ANGLE: f32 = 0.0;
+
 fn std_transform() -> Matrix2d {
     use graphics::*;
     let aspect = 16.0 / 9.0;
-    graphics::math::identity().scale(1.0 / aspect, 1.0)
+    let viewportCenter = Point { x:0.0, y:0.0 };
+    unsafe {
+        if SHAKE_ON {
+            graphics::math::identity().scale(1.0 / aspect, 1.0).trans(SHAKE_IT.x as f64, SHAKE_IT.y as f64)
+        } else {
+            graphics::math::identity().scale(1.0 / aspect, 1.0)
+        }
+    }
+}
+
+fn play_camera_shake() {
+    unsafe {
+        //if !SHAKE_ON {
+            SHAKE_RADIUS = 0.1;
+            SHAKE_ANGLE = rand::thread_rng().gen_range(1.0, 360.0);
+            SHAKE_IT = Point { x: SHAKE_ANGLE.sin() * SHAKE_RADIUS, y: SHAKE_ANGLE.cos() * SHAKE_RADIUS };
+           SHAKE_ON = true;
+       // }
+    }
 }
 
 fn on_mouse_move(game_state: &mut GameState, mouse: [f64;2]) {
@@ -227,35 +251,35 @@ fn on_load(assets: &mut Assets, game_state: &mut GameState) {
 }
 
 fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
-        // Rotate 2 radians per second.
+    // Rotate 2 radians per second.
     //self.game_state.rotation += 2.0 * args.dt;
 
-        // Radioactive decay
+    // Radioactive decay
     game_state.irradiance_field.decay(0.998f32);
 
-        // Fixed radiation source for the reactor or whatever
+    // Fixed radiation source for the reactor or whatever
     game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(-0.5f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
 
-        let mut pigeon_to_nuke = None;
+    let mut pigeon_to_nuke = None;
     for i in 0..game_state.pigeons.len() {
-        let mut pigeon = &mut game_state.pigeons[i];
-            if let PigeonStatus::ReachedDestination = pigeon.update((1.0 * args.dt) as f32) {
-            	pigeon_to_nuke = Some(i);
-            }
+    let mut pigeon = &mut game_state.pigeons[i];
+        if let PigeonStatus::ReachedDestination = pigeon.update((1.0 * args.dt) as f32) {
+            pigeon_to_nuke = Some(i);
         }
+    }
 
     for coop in game_state.coops.iter_mut() {
-        	coop.update(args.dt as f32);
-        }
+        coop.update(args.dt as f32);
+    }
 
-        if let Some(i) = pigeon_to_nuke {
+    if let Some(i) = pigeon_to_nuke {
         let pos = game_state.pigeons[i].vector.position;
         game_state.pigeons.swap_remove(i);
 
-        	if let PigeonAcceptanceLevel::GetRekd =
+        if let PigeonAcceptanceLevel::GetRekd =
             game_state.system_hubs.please_would_you_gladly_accept_a_friendly_pigeon_at_the_specified_position(pos) {
-                game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32, RadiationBlendMode::Add);
-            }
+            game_state.irradiance_field.splat(pos_to_irradiance_coord(pos), 4f32, RadiationBlendMode::Add);
+        }
     }
 
     if let Some(coop_idx) = game_state.selected_coop {
@@ -265,7 +289,20 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
 
     game_state.pigeon_timer += args.dt;
     game_state.system_hubs.update_systems(args);
-        		}
+
+    unsafe {
+        if (SHAKE_ON)
+        {
+            if SHAKE_RADIUS <= 0.001 {
+                SHAKE_ON = false;
+            }
+
+            SHAKE_ANGLE += (180.0 - rand::thread_rng().gen_range(1.0, 60.0));
+            SHAKE_RADIUS *= 0.9;
+            SHAKE_IT = Point { x: SHAKE_ANGLE.sin() * SHAKE_RADIUS, y: SHAKE_ANGLE.cos() * SHAKE_RADIUS };
+        }
+    }
+}
 
 #[allow(deprecated)]
 fn play_sound(sound_file: &str) {
@@ -278,7 +315,7 @@ fn play_sound(sound_file: &str) {
 
     sink.append(source);
     sink.detach();
-        }
+}
 
 fn play_pigeon_sound()
 {
@@ -292,7 +329,7 @@ fn play_pigeon_sound()
     sound_file.push_str(ss);
     sound_file.push_str(".wav");
     play_sound(&sound_file);
-        }
+}
 
 fn render_irradiance(
     factory: &mut gfx_device_gl::Factory,
@@ -323,28 +360,28 @@ fn render_trajectory(
     render_state: &mut RenderState,
     args: &RenderArgs) {
 
-        use graphics::*;
+    use graphics::*;
     if let Some(coop) = game_state.selected_coop {
         let trajectory = &game_state.aim_trajectory;
         if trajectory.points.len() < 2 {
-    		return;
-    	}
+            return;
+        }
 
         let col = if game_state.coops[coop].can_fire() {
-	    	let t = ((game_state.pigeon_timer * 30.0).sin() * 0.3 + 0.7) as f32;
+            let t = ((game_state.pigeon_timer * 30.0).sin() * 0.3 + 0.7) as f32;
             [0.831 * t, 0.812 * t, 0.416 * t, 1.0]
         } else {
-	    	let t = ((game_state.pigeon_timer * 10.0).sin() * 0.3 + 0.7) as f32;
+            let t = ((game_state.pigeon_timer * 10.0).sin() * 0.3 + 0.7) as f32;
             [0.408 * t, 0.067 * t, 0.247 * t, 0.5]
         };
 
-    	for i in 1..trajectory.points.len() {
-	    	Line::new(col, 0.005).draw([
-	    		trajectory.points[i-1].x as f64,
-	    		trajectory.points[i-1].y as f64,
-	    		trajectory.points[i].x as f64,
-	    		trajectory.points[i].y as f64,
-	    	], &Default::default(), std_transform(), render_state.g);
+        for i in 1..trajectory.points.len() {
+            Line::new(col, 0.005).draw([
+                trajectory.points[i-1].x as f64,
+                trajectory.points[i-1].y as f64,
+                trajectory.points[i].x as f64,
+                trajectory.points[i].y as f64,
+            ], &Default::default(), std_transform(), render_state.g);
 	    }
     }
 }
@@ -716,6 +753,10 @@ fn main() {
 
             if key == Key::G {
                 on_game_over(&mut game_state);
+            }
+
+            if key == Key::S {
+                play_camera_shake();
             }
         }
 
