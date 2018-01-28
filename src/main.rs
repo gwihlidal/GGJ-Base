@@ -434,7 +434,7 @@ fn render_ui(
 fn main() {
 
     let opengl = OpenGL::V3_2;
-    let samples = 4;
+    let samples = 1;
     let mut window: GlutinWindow = WindowSettings::new(
             "Irradiant Descent",
             [1920, 1080]
@@ -457,9 +457,24 @@ fn main() {
         gfx_device_gl::create_main_targets_raw(dim,
                                                color_format.0,
                                                depth_format.0);
-    let output_color = Typed::new(output_color);
-    let output_stencil = Typed::new(output_stencil);
+    //let output_color = Typed::new(output_color);
+    //let output_stencil = Typed::new(output_stencil);
 
+    let (oscreen_tex, oscreen_srv, oscreen_rtv) = factory.create_render_target::<Srgba8>(
+        draw_size.width as u16,
+        draw_size.height as u16).unwrap();
+
+    let (oscreen2_tex, oscreen2_srv, oscreen2_dsv) = factory.create_depth_stencil::<DepthStencil>(
+        draw_size.width as u16,
+        draw_size.height as u16).unwrap();
+
+    /*fn create_render_target<T: RenderFormat + TextureFormat>(
+        &mut self,
+        width: Size,
+        height: Size
+    ) -> Result<(Texture<R, T::Surface>, ShaderResourceView<R, T::View>, RenderTargetView<R, T>), CombinedError> { ... }
+
+*/
     let mut encoder = factory.create_command_buffer().into();
     let mut g2d = Gfx2d::new(opengl, &mut factory);
 
@@ -501,7 +516,8 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
-            g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
+            //g2d.draw(&mut encoder, &output_color, &output_stencil, args.viewport(), |c, g| {
+            g2d.draw(&mut encoder, &oscreen_rtv, &oscreen2_dsv, args.viewport(), |c, g| {
                 let mut render_state = RenderState { g, c };
                 clear([0.0, 0.0, 0.0, 1.0], render_state.g);
                 render_irradiance(&mut factory, &assets, &game_state, &mut render_state, &args);
