@@ -331,9 +331,11 @@ fn render_trajectory(
     	}
 
         let col = if game_state.coops[coop].can_fire() {
-            [0.1, 1.0, 0.3, 1.0]
+	    	let t = ((game_state.pigeon_timer * 30.0).sin() * 0.3 + 0.7) as f32;
+            [0.831 * t, 0.812 * t, 0.416 * t, 1.0]
         } else {
-            [1.0, 0.0, 0.0, 1.0]
+	    	let t = ((game_state.pigeon_timer * 10.0).sin() * 0.3 + 0.7) as f32;
+            [0.408 * t, 0.067 * t, 0.247 * t, 0.5]
         };
 
     	for i in 1..trajectory.points.len() {
@@ -463,8 +465,8 @@ fn render_radiation(render_state: &mut RenderState, sf: &ScalarField, time: f64)
     };
 
     let col = [0.635, 0.773, 0.388, 0.1];
-    draw(0.4f32, col);
-    draw(0.7f32, col);
+    draw(0.3f32, col);
+    draw(0.6f32, col);
     //draw(0.8f32, col);
 }
 
@@ -638,10 +640,10 @@ fn main() {
                 //clear([0.0, 0.0, 0.0, 1.0], render_state.g);
                 render_irradiance(&mut factory, &assets, &game_state, &mut render_state, &args);
                 render_radiation(&mut render_state, &game_state.irradiance_field, game_state.pigeon_timer);
-                render_trajectory(&assets, &game_state, &mut render_state, &args);
-                render_pigeons(&assets, &game_state, &mut render_state, &args);
-                render_coop(&assets, &game_state, &mut render_state, &args);
                 render_hubs(&assets, &game_state, &mut render_state, &args);
+                render_trajectory(&assets, &game_state, &mut render_state, &args);
+                render_coop(&assets, &game_state, &mut render_state, &args);
+                render_pigeons(&assets, &game_state, &mut render_state, &args);
                 render_ui(&assets, &game_state, &mut render_state, &args);
 
                 text::Text::new_color([0.0, 0.5, 0.0, 1.0], 32).draw("IRRADIANT DESCENT",
