@@ -1,8 +1,8 @@
 extern crate graphics;
 use geometry::{Point, Size};
-use Game;
 use RenderState;
 use piston::input::RenderArgs;
+use std_transform;
 
 #[derive(Clone)]
 pub struct SelectableRect {
@@ -46,12 +46,10 @@ impl SelectableRect {
     fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
         use graphics::*;
 
-        /*render_state.gl.draw(args.viewport(), |_c, gl| {
-            let rect = [0.0, 0.0, self.size.width as f64, self.size.height as f64];
+        let rect = [0.0, 0.0, self.size.width as f64, self.size.height as f64];
 
-            let transform = Game::std_transform()
-                .trans(self.position.x as f64, self.position.y as f64);
-            graphics::rectangle(color, rect, transform, gl);
-        });*/
+        let transform = std_transform()
+            .trans(self.position.x as f64, self.position.y as f64);
+        graphics::rectangle(color, rect, transform, render_state.g);
     }
 }
