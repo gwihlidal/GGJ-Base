@@ -7,6 +7,7 @@ use geometry::{Point, Size};
 use models::selectable::SelectableRect;
 use RenderState;
 use UpdateArgs;
+use scalar_field::smoothstep;
 
 
 #[derive(Clone)]
@@ -23,13 +24,17 @@ pub struct SystemHub {
     color: [f32; 4]
 }
 
-const DEFAULT_DISTRESS_LEVEL_DELTA : f32 = 0.002;
+const DEFAULT_DISTRESS_LEVEL_DELTA : f32 = 0.02;
+
+fn lerp(x0: f64, x1: f64, t: f64) -> f64 {
+    x0 + (x1 - x0) * t
+}
 
 impl SystemHub {
     /// Create a SystemHub
     pub fn new(position: Point, size: Size, name: String) -> SystemHub {
         SystemHub { name: name, distress_level: 0.0, distress_level_delta: DEFAULT_DISTRESS_LEVEL_DELTA,
-                    color: [1.0,0.0,1.0,1.0],
+                    color: [0.0, 0.0, 0.0, 1.0],
                     hub: SelectableRect::new(position, size, ||{}) } // There is an empty closure! :3
     }
 
@@ -37,10 +42,20 @@ impl SystemHub {
         self.distress_level += self.distress_level_delta * args.dt as f32;
         self.distress_level = self.distress_level.max(0.0);
 
-        self.color = [self.distress_level, 1.0, self.distress_level, 1.0];
-        if self.distress_level > 1.0 {
-            self.color = [1.0,0.0,0.0,1.0];
-        }
+        let t = smoothstep(1.0, 2.0, self.distress_level) as f64;
+
+        //self.color = [self.distress_level, 1.0, self.distress_level, 1.0];
+        let c0 = [0.667, 0.643, 0.224];
+        let c1 = [0.545, 0.18, 0.373];
+        //self.color = [, 0.643, 0.224, 1.0]
+        //if self.distress_level > 1.0 {
+            self.color = [
+                lerp(c0[0], c1[0], t) as f32,
+                lerp(c0[1], c1[1], t) as f32,
+                lerp(c0[2], c1[2], t) as f32,
+                1.0
+            ];
+        //}
     }
 
     pub fn render_hub(&self, render_state: &mut RenderState, args: &RenderArgs) {
