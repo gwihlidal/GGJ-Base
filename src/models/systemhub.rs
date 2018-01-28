@@ -108,11 +108,14 @@ impl SystemHubCollection {
     fn add_connection(&mut self, a_idx: usize, b_idx: usize, num_conns_a: i32, num_conns_b: i32) {
         let a = &self.systems[a_idx];
         let b = &self.systems[b_idx];
-        let dist_right_up  = (b.hub.position - a.hub.upper_right_corner()).abs();
-        let dist_left_down = (a.hub.position - b.hub.upper_right_corner()).abs();
+        let mut dist_right_up  = b.hub.position - a.hub.upper_right_corner();
+        let mut dist_left_down = a.hub.position - b.hub.upper_right_corner();
         
         let mut vertices: [Point; 3] = [Point::new(0.0,0.0), Point::new(0.0,0.0), Point::new(0.0,0.0)];
-        let corner_pos = [if dist_right_up.x < dist_left_down.x {1.0} else {0.0}, if dist_right_up.y < dist_left_down.y {1.0} else {0.0}];
+
+
+        let corner_pos = [if dist_right_up.x.abs() < dist_left_down.x.abs() {1.0} else {0.0},
+                          if dist_right_up.y.abs() < dist_left_down.y.abs() {1.0} else {0.0}];
         let corner_offset = [corner_pos[0] * 0.5 + 0.5, corner_pos[1] * 0.5 + 0.5];
 
         vertices[0].x = a.hub.position.x + corner_pos[0] * a.hub.size.width;
@@ -121,25 +124,27 @@ impl SystemHubCollection {
         vertices[0].y = a.hub.position.y + corner_pos[1] * a.hub.size.height;
         vertices[2].y = b.hub.position.y + (1.0 - corner_pos[1]) * b.hub.size.height;
 
-        // From hub a, go in x or y direction?
-        if corner_pos[0] * dist_right_up.x + (1.0 - corner_pos[0]) * dist_left_down.x > 
-            corner_pos[1] * dist_right_up.y + (1.0 - corner_pos[1]) * dist_left_down.y {
-                // Go in x
-                // Space out connections
-                vertices[0].y += CONNECTION_WIDTH * 6.0 * -corner_offset[1] * (num_conns_a as f32 * 2.0 + 1.0);
-                vertices[2].x += CONNECTION_WIDTH * 6.0 * corner_offset[0] * (num_conns_b as f32 * 2.0 + 1.0);
+        let dir = [vertices[2].x - vertices[0].x, vertices[2].y - vertices[2].y];
+        let dir_sign = [dir[0].signum(), dir[1].signum()];
 
-                vertices[1].x = vertices[2].x;
-                vertices[1].y = vertices[0].y;
+        // From hub a, go in x or y direction?
+        if dir[0] > dir[1] {
+            // Go in x
+            // Space out connections
+            vertices[0].y += CONNECTION_WIDTH * 6.0 * -corner_offset[1] * dir_sign[1] * (num_conns_a as f32 * 2.0 + 1.0);
+            vertices[2].x += CONNECTION_WIDTH * 6.0 *  corner_offset[0] * dir_sign[0] * (num_conns_b as f32 * 2.0 + 1.0);
+
+            vertices[1].x = vertices[2].x;
+            vertices[1].y = vertices[0].y;
         }
         else {
-                // Go in y
-                // Space out connections
-                vertices[0].x += CONNECTION_WIDTH * 6.0 * -corner_offset[0] * (num_conns_a as f32 * 2.0 + 1.0);
-                vertices[2].y += CONNECTION_WIDTH * 6.0 * corner_offset[1] * (num_conns_b as f32 * 2.0 + 1.0);
+            // Go in y
+            // Space out connections
+            vertices[0].x += CONNECTION_WIDTH * 6.0 * -corner_offset[0] * dir_sign[0] * (num_conns_a as f32 * 2.0 + 1.0);
+            vertices[2].y += CONNECTION_WIDTH * 6.0 *  corner_offset[1] * dir_sign[1] * (num_conns_b as f32 * 2.0 + 1.0);
 
-                vertices[1].x = vertices[0].x;
-                vertices[1].y = vertices[2].y;
+            vertices[1].x = vertices[0].x;
+            vertices[1].y = vertices[2].y;
         }
 
         self.connections.push((SystemConnection::new(vertices[0], vertices[1], vertices[2]), a_idx, b_idx));
@@ -158,13 +163,16 @@ impl SystemHubCollection {
         let size = Size::new(0.2, 0.5);
         self.systems.push(SystemHub::new(pos, size, "Cooling System".to_string()));
 
-        let pos = Point::new(-1.4, 0.3);
+        let pos = Point::new(-1.2, 0.7);
         let size = Size::new(0.2, 0.3);
         self.systems.push(SystemHub::new(pos, size, "Command Tower".to_string()));
 
+        // Don't flip the paramteres...
         self.add_connection(0, 1, 0, 0);
-        self.add_connection(0, 2, 0, 0);
-        self.add_connection(0, 3, 0, 0);
+        self.add_connection(2, 0, 0, 1);
+        self.add_connection(0, 3, 2, 0);
+        self.add_connection(1, 3, 1, 1);
+        self.add_connection(2, 1, 1, 2);
     }
 
     pub fn update_systems(&mut self, args: &UpdateArgs) {
