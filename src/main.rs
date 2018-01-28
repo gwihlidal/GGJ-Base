@@ -813,28 +813,13 @@ fn main() {
         if let Some(Button::Mouse(button)) = e.press_args() {
             if !game_state.starting {
             on_mouse_click(&mut game_state, [cursor.x as f64, cursor.y as f64]);
-        }
+            }
         }
 
         if let Some(Button::Mouse(_)) = e.release_args() {
             if game_state.starting {
                 game_state.starting = false;
-            } else {
-            on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
-        }
-        }
-
-        if let Some(Button::Keyboard(key)) = e.press_args() {
-            if key == Key::C {
-                //play_pigeon_sound();
-            }
-
-            if key == Key::G {
-                //on_game_over(&mut game_state);
-            }
-
-            if key == Key::R {
-                //on_game_over(&mut game_state);
+            } else if game_state.game_over{
                 game_state.game_over = false;
                 game_state.starting = true;
 
@@ -852,6 +837,22 @@ fn main() {
                 };
 
                 on_load(&mut assets, &mut game_state);
+            }
+            else{
+            on_mouse_release(&mut game_state, [cursor.x as f64, cursor.y as f64]);
+        }
+        }
+
+        if let Some(Button::Keyboard(key)) = e.press_args() {
+            if key == Key::C {
+                //play_pigeon_sound();
+            }
+
+            if key == Key::G {
+                //on_game_over(&mut game_state);
+            }
+
+            if key == Key::R {
 
             }
 
