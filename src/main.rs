@@ -255,7 +255,7 @@ fn on_update(game_state: &mut GameState, args: &UpdateArgs, cursor: Point) {
     //self.game_state.rotation += 2.0 * args.dt;
 
     // Radioactive decay
-    game_state.irradiance_field.decay(0.998f32);
+    game_state.irradiance_field.decay(0.88f32.powf(args.dt as f32));
 
     // Fixed radiation source for the reactor or whatever
     game_state.irradiance_field.splat(pos_to_irradiance_coord(Point::new(-0.5f32, 0.5f32)), 7f32, RadiationBlendMode::Max);
@@ -440,6 +440,69 @@ const MARCHING_SQUARES_SOLID: &'static [&'static [&'static [[f64; 2]]]] = &[
 	&[&[ [1f64, 0f64], [2f64, 0f64], [2f64, 2f64], [0f64, 2f64], [0f64, 1f64] ]],	// 1110
 	&[&[ [0f64, 0f64], [2f64, 0f64], [2f64, 2f64], [0f64, 2f64] ]],	// 1111
 ];
+
+fn render_box(
+	pos: Point, size: Point,
+    game_state: &GameState,
+    render_state: &mut RenderState,
+    args: &RenderArgs) {
+
+    use geometry::traits::Position;
+
+    let mut verts : Vec<Point> = Vec::new();
+
+	{
+	    let mut make_edge = |a: Point, b: Point| {
+	    	let pts : i32 = 4;
+	    	for i in 0..pts {
+	    		let mut p : Point = a.lerp(&b, (i as f32) / (pts as f32));
+	    		let derp = p;
+	    		let ampl_t = ((derp.x + derp.y + game_state.pigeon_timer as f32 * 1f32) * 4f32).sin();
+
+	    		let ampl = smoothstep(0.7, 1.0, ampl_t);
+	    		let ampl = (ampl + 0.6f32) * 0.003f32;
+
+	    		let ampl2 = smoothstep(0.5, 1.0, ampl_t);
+	    		let ampl2 = ampl2 * 0.005f32;
+
+	    		p.x += (derp.y * 100f32 + game_state.pigeon_timer as f32 * 63f32).sin() as f32 * ampl;
+	    		p.y += (derp.x * 100f32 + game_state.pigeon_timer as f32 * 71f32).sin() as f32 * ampl;
+
+	    		p.x += (derp.y * 23f32 + game_state.pigeon_timer as f32 * 23f32).sin() as f32 * ampl2;
+	    		p.y += (derp.x * 21f32 + game_state.pigeon_timer as f32 * 21f32).sin() as f32 * ampl2;
+
+	    		p.x += (derp.y * 13f32 + game_state.pigeon_timer as f32 * 63f32).sin() as f32 * 0.002f32;
+	    		p.y += (derp.x *  7f32 + game_state.pigeon_timer as f32 * 51f32).sin() as f32 * 0.002f32;
+
+	    		verts.push(p);
+	    	}
+	    };
+
+	    {
+	    	let v0 = pos + Point::new(size.x * -0.5f32, size.y * -0.5f32);
+	    	let v1 = pos + Point::new(size.x *  0.5f32, size.y * -0.5f32);
+	    	let v2 = pos + Point::new(size.x *  0.5f32, size.y *  0.5f32);
+	    	let v3 = pos + Point::new(size.x * -0.5f32, size.y *  0.5f32);
+	    	make_edge(v0, v1);
+	    	make_edge(v1, v2);
+	    	make_edge(v2, v3);
+	    	make_edge(v3, v0);
+	    }
+	}
+
+    let transform = std_transform();
+  	let mut prev = verts[verts.len() - 1];
+    for i in 0..verts.len() {
+        Line::new([1.0f32, 1.0f32, 1.0f32, 1.0f32], 0.003).draw([
+                prev.x as f64,
+                prev.y as f64,
+                verts[i].x as f64,
+                verts[i].y as f64,
+        ], &render_state.c.draw_state, transform, render_state.g);
+
+        prev = verts[i];
+    }
+}
 
 fn render_radiation(render_state: &mut RenderState, sf: &ScalarField, time: f64) {
 	use graphics::*;
@@ -703,6 +766,15 @@ fn main() {
                 render_trajectory(&assets, &game_state, &mut render_state, &args);
                 render_coop(&assets, &game_state, &mut render_state, &args);
                 render_pigeons(&assets, &game_state, &mut render_state, &args);
+
+                // Each one of those costs around 2 milliseconds, so use them wisely.
+                render_box(Point::new( 0.3f32, -0.2f32), Point::new(0.3f32, 0.2f32), &game_state, &mut render_state, &args);
+                render_box(Point::new(-0.5f32, -0.3f32), Point::new(0.3f32, 0.2f32), &game_state, &mut render_state, &args);
+                render_box(Point::new( 0.5f32, 0.3f32), Point::new(0.3f32, 0.2f32), &game_state, &mut render_state, &args);
+                render_box(Point::new( 0.5f32, 0.3f32), Point::new(0.3f32, 0.2f32), &game_state, &mut render_state, &args);
+                render_box(Point::new(-0.5f32, 0.2f32), Point::new(0.3f32, 0.2f32), &game_state, &mut render_state, &args);
+                render_box(Point::new(-0.5f32, 0.8f32), Point::new(0.3f32, 0.2f32), &game_state, &mut render_state, &args);
+
             });
 
             //encoder.clear(&data.out, [1.0, 0.0, 0.0, 1.0]);
