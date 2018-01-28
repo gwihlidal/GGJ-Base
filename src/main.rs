@@ -36,6 +36,7 @@ use scalar_field::*;
 #[macro_use]
 pub mod geometry;
 use geometry::point::{Point};
+use geometry::size::Size;
 
 #[macro_use]
 pub mod models;
@@ -45,6 +46,8 @@ use graphics::math::Matrix2d;
 
 use models::pigeon::*;
 use models::coop::Coop;
+use models::speechbubble::SpeechBubble;
+use models::systemhub::{SystemHubCollection, PigeonAcceptanceLevel};
 use geometry::traits::Collide;
 
 pub struct RenderState<'a, 'b: 'a> {
@@ -57,6 +60,8 @@ pub struct RenderState<'a, 'b: 'a> {
 pub struct GameState {
     pigeons: Vec<Pigeon>,
     coops: Vec<Coop>,
+    bubbles: Vec<SpeechBubble>,
+    system_hubs: SystemHubCollection,
     irradiance_field: ScalarField,
     aim_trajectory: Trajectory,
     selected_coop: Option<usize>,
@@ -264,7 +269,7 @@ fn render_trajectory(
     	}
 
     	for i in 1..trajectory.points.len() {
-	    	Line::new([1.0f32, 0.1f32, 0.02f32, 1.0f32], 0.005).draw([
+	    	Line::new(col, 0.005).draw([
 	    		trajectory.points[i-1].x as f64,
 	    		trajectory.points[i-1].y as f64,
 	    		trajectory.points[i].x as f64,

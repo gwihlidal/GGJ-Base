@@ -6,7 +6,7 @@ use std_transform;
 
 #[derive(Clone)]
 pub struct SelectableRect {
-    /// The rect's corner position
+    /// The rect's lower left corner position
     pub position: Point,
     /// The rectangle size
     pub size: Size,
@@ -20,6 +20,10 @@ impl SelectableRect {
     /// Create a SelectableRect
     pub fn new(position: Point, size: Size, on_click: fn()) -> SelectableRect {
         SelectableRect { position: position, size: size, on_click: on_click, time_inside: 0.0 }
+    }
+
+    pub fn contains_point(&self, pt: Point) -> bool {
+        self.size.contains(pt - self.position)
     }
 
     /// Clicked on?
@@ -43,7 +47,7 @@ impl SelectableRect {
         return 1.0 + self.time_inside.cos();
     }
 
-    fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
+    pub fn render_rect(&self, render_state: &mut RenderState, args: &RenderArgs, color: [f32; 4]) {
         use graphics::*;
 
         let rect = [0.0, 0.0, self.size.width as f64, self.size.height as f64];
